@@ -1,0 +1,38 @@
+# ──────────────────────────────────────────────
+# SceneFlow API — Python Dependencies
+# ──────────────────────────────────────────────
+
+# Web framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# Async task queue
+celery[redis]>=5.3.0
+
+# Gemini SDK (LLM)
+google-genai>=0.3.0
+
+# Free TTS Engine
+edge-tts>=7.0.0
+
+# Data validation
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# Headless browser for HTML rendering
+playwright>=1.42.0
+
+# Video composition
+ffmpeg-python>=0.2.0
+
+# Audio metadata (duration detection)
+mutagen>=1.47.0
+
+# HTML templating
+Jinja2>=3.1.0
+
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# HTTP client
+httpx>=0.27.0

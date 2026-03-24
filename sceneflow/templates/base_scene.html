@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>SceneFlow — {{ scene.scene_id }}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ─────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --brand-primary:    {{ style.brand_colors[0] if style.brand_colors|length > 0 else '#4F46E5' }};
+      --brand-secondary:  {{ style.brand_colors[1] if style.brand_colors|length > 1 else '#10B981' }};
+      --brand-accent:     {{ style.brand_colors[2] if style.brand_colors|length > 2 else '#F59E0B' }};
+      --bg:               {{ style.background_color }};
+      --font:             {{ style.font_family }};
+    }
+
+    body {
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: var(--font);
+      color: #F1F5F9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scene-container {
+      width: 1680px;
+      height: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      padding: 60px;
+      position: relative;
+    }
+
+    /* ── Decorative gradient orb ──────────────── */
+    .scene-container::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--brand-primary) 0%, transparent 70%);
+      opacity: 0.12;
+      top: -100px;
+      right: -100px;
+      pointer-events: none;
+    }
+
+    /* ── Logo ─────────────────────────────────── */
+    .logo {
+      position: absolute;
+      top: 30px;
+      left: 40px;
+      height: 40px;
+      opacity: 0.7;
+    }
+
+    /* ═══════════════════════════════════════════
+       Visual Element Styles
+       ═══════════════════════════════════════════ */
+
+    /* ── title_text ───────────────────────────── */
+    .visual-title_text h1 {
+      font-size: 72px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.15;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      max-width: 1400px;
+    }
+
+    /* ── bullet_points ────────────────────────── */
+    .visual-bullet_points {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .visual-bullet_points .bullet-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 24px 32px;
+      backdrop-filter: blur(10px);
+    }
+
+    .visual-bullet_points .bullet-marker {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--brand-primary);
+      flex-shrink: 0;
+      box-shadow: 0 0 12px var(--brand-primary);
+    }
+
+    .visual-bullet_points .bullet-text {
+      font-size: 32px;
+      font-weight: 600;
+      color: #E2E8F0;
+    }
+
+    /* ── icon_diagram ─────────────────────────── */
+    .visual-icon_diagram {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .visual-icon_diagram .icon-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px 48px;
+      min-width: 180px;
+    }
+
+    .visual-icon_diagram .icon-emoji {
+      font-size: 64px;
+    }
+
+    .visual-icon_diagram .icon-label {
+      font-size: 22px;
+      font-weight: 600;
+      color: #CBD5E1;
+      text-align: center;
+    }
+
+    /* Connector arrows between icon cards */
+    .visual-icon_diagram .icon-connector {
+      font-size: 36px;
+      color: var(--brand-secondary);
+      opacity: 0.6;
+    }
+
+    /* ── code_block ────────────────────────────── */
+    .visual-code_block {
+      max-width: 1300px;
+      width: 100%;
+    }
+
+    .visual-code_block .code-window {
+      background: #1E293B;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .visual-code_block .code-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      background: rgba(0,0,0,0.3);
+    }
+
+    .visual-code_block .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red   { background: #EF4444; }
+    .dot-yellow { background: #F59E0B; }
+    .dot-green { background: #10B981; }
+
+    .visual-code_block .code-lang {
+      margin-left: auto;
+      font-size: 14px;
+      color: #64748B;
+      text-transform: uppercase;
+    }
+
+    .visual-code_block pre {
+      padding: 32px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 24px;
+      line-height: 1.6;
+      color: #E2E8F0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    /* ── flowchart ─────────────────────────────── */
+    .visual-flowchart {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .visual-flowchart .flow-step {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      color: white;
+      font-size: 26px;
+      font-weight: 700;
+      padding: 28px 40px;
+      border-radius: 16px;
+      text-align: center;
+      min-width: 180px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .visual-flowchart .flow-arrow {
+      font-size: 36px;
+      color: var(--brand-accent);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene-container">
+
+    {# ── Optional Logo ─────────────────────── #}
+    {% if style.logo_url %}
+    <img class="logo" src="{{ style.logo_url }}" alt="Logo" />
+    {% endif %}
+
+    {# ── Render each visual element ────────── #}
+    {% for visual in scene.visuals %}
+
+      {# ── TITLE TEXT ──────────────────────── #}
+      {% if visual.type.value == "title_text" %}
+      <div class="visual-title_text">
+        <h1>{{ visual.content.get("text", "") }}</h1>
+      </div>
+
+      {# ── BULLET POINTS ──────────────────── #}
+      {% elif visual.type.value == "bullet_points" %}
+      <div class="visual-bullet_points">
+        {% for item in visual.content.get("items", []) %}
+        <div class="bullet-item">
+          <div class="bullet-marker"></div>
+          <span class="bullet-text">{{ item }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ── ICON DIAGRAM ───────────────────── #}
+      {% elif visual.type.value == "icon_diagram" %}
+      <div class="visual-icon_diagram">
+        {% for icon in visual.content.get("icons", []) %}
+          {% if not loop.first %}
+          <span class="icon-connector">→</span>
+          {% endif %}
+          <div class="icon-card">
+            <span class="icon-emoji">{{ icon.get("emoji", "📦") }}</span>
+            <span class="icon-label">{{ icon.get("label", "") }}</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      {# ── CODE BLOCK ─────────────────────── #}
+      {% elif visual.type.value == "code_block" %}
+      <div class="visual-code_block">
+        <div class="code-window">
+          <div class="code-titlebar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+            <span class="code-lang">{{ visual.content.get("language", "code") }}</span>
+          </div>
+          <pre>{{ visual.content.get("code", "") }}</pre>
+        </div>
+      </div>
+
+      {# ── FLOWCHART ──────────────────────── #}
+      {% elif visual.type.value == "flowchart" %}
+      <div class="visual-flowchart">
+        {% for step in visual.content.get("steps", []) %}
+          {% if not loop.first %}
+          <span class="flow-arrow">→</span>
+          {% endif %}
+          <div class="flow-step">{{ step }}</div>
+        {% endfor %}
+      </div>
+
+      {% endif %}
+    {% endfor %}
+
+  </div>
+</body>
+</html>

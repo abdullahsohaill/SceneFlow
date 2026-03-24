@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SceneFlow API - Create Videos with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: radial-gradient(circle at top left, #291a40, #0a0a0f 60%);
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+        }
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-primary {
+            background: linear-gradient(to right, #6366f1, #8b5cf6);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
+        }
+        .loader {
+            border-top-color: #8b5cf6;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex justify-center items-start pt-12 md:pt-20">
+
+    <div class="max-w-4xl w-full glass p-8 md:p-12">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-3">SceneFlow <span class="gradient-text">Studio</span></h1>
+            <p class="text-slate-400 text-lg">Generate structured explainer videos from a single prompt.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Input Form -->
+            <div class="flex flex-col space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Topic / Idea</label>
+                    <textarea id="topic" rows="3" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition" placeholder="e.g. How does DNS resolution work?"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Target Audience</label>
+                    <select id="audience" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+                        <option value="beginners">Absolute Beginners</option>
+                        <option value="students">Computer Science Students</option>
+                        <option value="professionals">Experienced Professionals</option>
+                    </select>
+                </div>
+
+                <button id="generateBtn" onclick="generateAndRender()" class="btn-primary w-full py-4 rounded-xl font-semibold text-lg flex justify-center items-center shadow-lg">
+                    <span>Generate & Render Video</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+
+            <!-- Status & Output -->
+            <div class="glass-panel p-6 flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden">
+                
+                <!-- Idle State -->
+                <div id="idleState" class="text-center text-slate-500 flex flex-col items-center">
+                    <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                    <p>Your generated video will appear here.</p>
+                </div>
+
+                <!-- Progress State -->
+                <div id="progressState" class="hidden flex-col items-center w-full px-4">
+                    <div class="loader w-12 h-12 border-4 border-slate-700 rounded-full mb-6"></div>
+                    <h3 id="statusTitle" class="text-xl font-semibold text-white mb-2">Drafting Script...</h3>
+                    <p id="statusDesc" class="text-sm text-slate-400 text-center">Using Gemini Flash 2.5 to generate the Scene DSL.</p>
+                    
+                    <div class="w-full bg-slate-800 rounded-full h-2 mt-6 overflow-hidden">
+                        <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full w-1/4 transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Video Result State -->
+                <div id="resultState" class="hidden w-full h-full flex flex-col">
+                    <video id="outputVideo" class="w-full rounded-lg shadow-2xl mb-4" controls>
+                        <source src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <a id="downloadLink" href="#" download class="text-center text-indigo-400 hover:text-indigo-300 text-sm font-medium transition flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download HD MP4
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        function setUIState(state, title="", desc="", progress=0) {
+            document.getElementById('idleState').classList.add('hidden');
+            document.getElementById('progressState').classList.add('hidden');
+            document.getElementById('resultState').classList.add('hidden');
+            document.getElementById('generateBtn').disabled = (state === 'progress');
+
+            if (state === 'idle') document.getElementById('idleState').classList.remove('hidden');
+            if (state === 'progress') {
+                document.getElementById('progressState').classList.remove('hidden');
+                document.getElementById('progressState').classList.add('flex');
+                document.getElementById('statusTitle').innerText = title;
+                document.getElementById('statusDesc').innerText = desc;
+                document.getElementById('progressBar').style.width = progress + '%';
+            }
+            if (state === 'result') document.getElementById('resultState').classList.remove('hidden');
+        }
+
+        async function generateAndRender() {
+            const topic = document.getElementById('topic').value.trim();
+            const audience = document.getElementById('audience').value;
+            
+            if (!topic) return alert("Please enter a topic!");
+
+            // 1. Draft
+            setUIState('progress', 'Generating Manim Script...', 'Gemini is writing animated Manim Python code for each scene.', 25);
+            try {
+                const draftRes = await fetch(`${API_BASE}/api/v1/draft-manim`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        topic: topic,
+                        audience: audience,
+                        brand_colors: ["#6366f1", "#0ea5e9"]
+                    })
+                });
+                
+                if (!draftRes.ok) {
+                    const err = await draftRes.json();
+                    throw new Error(err.detail || "Failed to generate Manim draft.");
+                }
+                const draftData = await draftRes.json();
+
+                // 2. Render
+                setUIState('progress', 'Rendering Animations...', 'Manim is rendering animated scenes + edge-tts narration. ~60 seconds.', 60);
+                const renderRes = await fetch(`${API_BASE}/api/v1/render-manim`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ draft: draftData.draft })
+                });
+
+                if (!renderRes.ok) throw new Error("Failed to queue render job.");
+                const renderData = await renderRes.json();
+                const jobId = renderData.job_id;
+
+                // 3. Poll Status
+                pollStatus(jobId);
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                setUIState('idle');
+            }
+        }
+
+        async function pollStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        const videoUrl = data.result_url;
+                        const videoEl = document.getElementById('outputVideo');
+                        videoEl.src = videoUrl;
+                        document.getElementById('downloadLink').href = videoUrl;
+                        setUIState('result');
+                    } else if (data.status === 'failed') {
+                        clearInterval(interval);
+                        alert("Rendering failed: " + data.error);
+                        setUIState('idle');
+                    } else {
+                        // processing
+                        document.getElementById('progressBar').style.width = '85%';
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

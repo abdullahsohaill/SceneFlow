@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+.idea/
+.vscode/
+
+# Output directories
+node_modules/
+dist/
+.DS_Store
+media/
+outputs/
+output/
+*.mp4
+*.mp3
+
+# Databases/Caching
+dump.rdb
