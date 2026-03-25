@@ -1,0 +1,55 @@
+# Qwen2.5-Coder-7B QLoRA Fine-Tuning Config
+# ==========================================
+
+model:
+  name: "Qwen/Qwen2.5-Coder-7B-Instruct"
+  trust_remote_code: true
+
+quantization:
+  load_in_8bit: true
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  task_type: "CAUSAL_LM"
+  bias: "none"
+
+training:
+  output_dir: "outputs/qwen7b-manim-ft"
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 1.5e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  lr_scheduler_type: "cosine"
+  max_seq_length: 2048
+  logging_steps: 10
+  eval_strategy: "steps"
+  eval_steps: 100
+  save_strategy: "steps"
+  save_steps: 200
+  save_total_limit: 3
+  fp16: false
+  bf16: true
+  gradient_checkpointing: true   # needed for 7B to fit in memory
+  optim: "paged_adamw_8bit"
+  report_to: "none"
+
+data:
+  train_file: "data/train.jsonl_ft"
+  val_file: "data/val.jsonl_ft"
+
+merge:
+  enabled: true
+  output_dir: "outputs/qwen7b-manim-ft-merged"

@@ -1,0 +1,56 @@
+# Qwen2.5-Coder-3B QLoRA Fine-Tuning Config
+# ==========================================
+
+model:
+  name: "Qwen/Qwen2.5-Coder-3B-Instruct"
+  trust_remote_code: true
+
+quantization:
+  load_in_8bit: true
+  # bnb_4bit_compute_dtype: "bfloat16"  # uncomment for 4-bit instead
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  task_type: "CAUSAL_LM"
+  bias: "none"
+
+training:
+  output_dir: "outputs/qwen3b-manim-ft"
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  lr_scheduler_type: "cosine"
+  max_seq_length: 2048
+  logging_steps: 10
+  eval_strategy: "steps"
+  eval_steps: 100
+  save_strategy: "steps"
+  save_steps: 200
+  save_total_limit: 3
+  fp16: false
+  bf16: true
+  gradient_checkpointing: false
+  optim: "paged_adamw_8bit"
+  report_to: "none"  # set to "wandb" for W&B tracking
+
+data:
+  train_file: "data/train.jsonl_ft"
+  val_file: "data/val.jsonl_ft"
+
+merge:
+  enabled: true
+  output_dir: "outputs/qwen3b-manim-ft-merged"

@@ -20,3 +20,14 @@ output/
 
 # Databases/Caching
 dump.rdb
+
+# Fine-tuning
+finetuning/outputs/
+finetuning/results/
+finetuning/data/train.jsonl*
+finetuning/data/val.jsonl*
+finetuning/data/dataset_stats.json*
+finetuning/ManiBench_Pilot_Dataset.json*
+.venv_finetune/
+.hf_cache/
+

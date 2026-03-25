@@ -1,0 +1,26 @@
+# ── Core Training ──
+torch>=2.1.0
+transformers>=4.45.0
+peft>=0.13.0
+trl>=0.12.0
+bitsandbytes>=0.44.0
+accelerate>=1.0.0
+
+# ── Data ──
+datasets>=3.0.0
+huggingface-hub>=0.25.0
+
+# ── Evaluation ──
+manim>=0.18.0
+
+# ── Utilities ──
+pyyaml>=6.0
+rich>=13.0
+pandas>=2.0
+tabulate>=0.9.0
+
+# ── Optional: faster inference ──
+# vllm>=0.6.0  # uncomment if using vLLM backend
+
+# ── Optional: experiment tracking ──
+# wandb>=0.18.0
