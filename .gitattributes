@@ -1,0 +1,4 @@
+* text=auto
+
+# Enforce LF for bash scripts no matter the OS checking them out
+*.sh text eol=lf
