@@ -152,20 +152,10 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
 
     model, tokenizer = load_model_and_tokenizer(config, bnb_config)
     
-    # ── Eradicate native bfloat16 tensors from the original safetensors ──
-    for name, param in model.named_parameters():
-        if getattr(param, "dtype", None) == torch.bfloat16:
-            param.data = param.data.to(torch.float16)
-    
     # ── Prepare robust mixed precision ──
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
     
     model = get_peft_model(model, lora_config)
-    
-    # Ensure PEFT LoRA adapters didn't default to bfloat16
-    for name, param in model.named_parameters():
-        if getattr(param, "dtype", None) == torch.bfloat16:
-            param.data = param.data.to(torch.float32 if param.requires_grad else torch.float16)
     _print_model_info(model)
 
     train_ds, val_ds = load_data(config, tokenizer)
