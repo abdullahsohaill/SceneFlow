@@ -133,14 +133,9 @@ def load_data(config: dict, tokenizer):
 
 
 
-def formatting_func_factory(tokenizer):
-    """Factory for dataset formatting function."""
-    def formatting_func(example):
-        if example.get("messages") and isinstance(example["messages"][0], list):
-            # Batched processing
-            return [tokenizer.apply_chat_template(m, tokenize=False, add_generation_prompt=False) for m in example["messages"]]
-        return tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
-    return formatting_func
+def get_text(example):
+    """Top-level, purely picklable formatting function for Windows."""
+    return example["text"]
 
 
 def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
@@ -184,8 +179,15 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         max_steps=max_steps if max_steps else -1,
     )
 
-    # ── Format dataset (via SFTTrainer factory) ──
-    formatting_func = formatting_func_factory(tokenizer)
+    # ── Format dataset manually to avoid Windows dill/multiprocessing crashes ──
+    from datasets import Dataset
+    
+    def _convert_to_text_ds(ds):
+        texts = [tokenizer.apply_chat_template(ex["messages"], tokenize=False, add_generation_prompt=False) for ex in ds]
+        return Dataset.from_dict({"text": texts})
+
+    train_ds = _convert_to_text_ds(train_ds)
+    val_ds = _convert_to_text_ds(val_ds)
 
     # ── Trainer ──
     tokenizer.model_max_length = train_cfg["max_seq_length"]
@@ -195,7 +197,7 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         train_dataset=train_ds,
         eval_dataset=val_ds,
         processing_class=tokenizer,
-        formatting_func=formatting_func,
+        formatting_func=get_text,
     )
 
     if dry_run:
