@@ -136,7 +136,7 @@ def load_data(config: dict, tokenizer):
 def formatting_func_factory(tokenizer):
     """Factory for dataset formatting function."""
     def formatting_func(example):
-        if isinstance(example["messages"], list):
+        if example.get("messages") and isinstance(example["messages"][0], list):
             # Batched processing
             return [tokenizer.apply_chat_template(m, tokenize=False, add_generation_prompt=False) for m in example["messages"]]
         return tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
