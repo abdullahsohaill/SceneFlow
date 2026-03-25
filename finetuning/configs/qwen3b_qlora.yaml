@@ -6,7 +6,7 @@ model:
   trust_remote_code: true
 
 quantization:
-  load_in_8bit: false
+  load_in_8bit: true
   # bnb_4bit_compute_dtype: "bfloat16"  # uncomment for 4-bit instead
 
 lora:
