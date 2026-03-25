@@ -87,12 +87,16 @@ def load_model_and_tokenizer(config: dict, bnb_config: BitsAndBytesConfig):
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
+    # Determine dtype from config
+    train_cfg = config.get("training", {})
+    dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=trust_remote,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=dtype,
     )
 
     model.config.use_cache = False  # disable for training
@@ -237,12 +241,15 @@ def _merge_and_save(config: dict, adapter_path: str, output_path: str):
     model_name = config["model"]["name"]
     trust_remote = config["model"].get("trust_remote_code", True)
 
-    # Load base model in full precision for merging
+    # Load base model in matching precision for merging
+    train_cfg = config.get("training", {})
+    dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
+
     base_model = AutoModelForCausalLM.from_pretrained(
         model_name,
         device_map="auto",
         trust_remote_code=trust_remote,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=dtype,
     )
 
     # Load and merge LoRA
