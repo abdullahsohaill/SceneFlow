@@ -15,8 +15,13 @@ echo "╚═══════════════════════�
 echo ""
 
 # 1. Setup Environment
-echo "📦 [1/7] Installing dependencies..."
-pip install -r requirements.txt
+echo "📦 [1/7] Setting up Python virtual environment..."
+if [ ! -d ".venv_finetuning" ]; then
+    python3 -m venv .venv_finetuning || { echo "Failed to create venv. You might need to run: sudo apt install python3-venv"; exit 1; }
+fi
+source .venv_finetuning/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
 mkdir -p results outputs
 echo ""
 
