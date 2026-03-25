@@ -27,7 +27,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,
 )
-from trl import SFTTrainer, SFTConfig
+from trl import SFTTrainer
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -158,7 +158,7 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     # ── Training arguments ──
     output_dir = train_cfg["output_dir"]
 
-    training_args = SFTConfig(
+    training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=train_cfg["num_train_epochs"],
         per_device_train_batch_size=train_cfg["per_device_train_batch_size"],
@@ -168,7 +168,6 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         weight_decay=train_cfg["weight_decay"],
         warmup_ratio=train_cfg["warmup_ratio"],
         lr_scheduler_type=train_cfg["lr_scheduler_type"],
-        max_seq_length=train_cfg["max_seq_length"],
         logging_steps=train_cfg["logging_steps"],
         eval_strategy=train_cfg["eval_strategy"],
         eval_steps=train_cfg["eval_steps"],
@@ -181,7 +180,6 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         optim=train_cfg["optim"],
         report_to=train_cfg["report_to"],
         max_steps=max_steps if max_steps else -1,
-        dataset_text_field="text",
     )
 
     # ── Format dataset ──
@@ -199,6 +197,8 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         train_dataset=train_ds,
         eval_dataset=val_ds,
         processing_class=tokenizer,
+        max_seq_length=train_cfg["max_seq_length"],
+        dataset_text_field="text",
     )
 
     if dry_run:
