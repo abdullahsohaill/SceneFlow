@@ -166,7 +166,7 @@ def prepare_dataset(
     val_path = output_dir / "val.jsonl_ft"
 
     for path, data in [(train_path, train_data), (val_path, val_data)]:
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             for item in data:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
@@ -178,7 +178,7 @@ def prepare_dataset(
 
     # Save stats
     stats_path = output_dir / "dataset_stats.json_ft"
-    with open(stats_path, "w") as f:
+    with open(stats_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, indent=2)
 
     return stats
