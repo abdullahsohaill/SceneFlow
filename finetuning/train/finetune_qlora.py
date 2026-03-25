@@ -91,12 +91,17 @@ def load_model_and_tokenizer(config: dict, bnb_config: BitsAndBytesConfig):
     train_cfg = config.get("training", {})
     dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
+    # Handle Mac MPS Fallback
+    is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    device = {"": "mps"} if is_mac else "auto"
+    quant_kwargs = {"quantization_config": bnb_config} if not is_mac else {}
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        quantization_config=bnb_config,
-        device_map="auto",
+        device_map=device,
         trust_remote_code=trust_remote,
         torch_dtype=dtype,
+        **quant_kwargs
     )
 
     model.config.use_cache = False  # disable for training
@@ -150,10 +155,13 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     bnb_config = setup_quantization(config)
     lora_config = setup_lora(config)
 
+    is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+
     model, tokenizer = load_model_and_tokenizer(config, bnb_config)
     
-    # ── Prepare robust mixed precision ──
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
+    # ── Prepare robust mixed precision (CUDA ONLY) ──
+    if not is_mac:
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
     
     model = get_peft_model(model, lora_config)
     _print_model_info(model)
@@ -182,7 +190,7 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         fp16=train_cfg["fp16"],
         bf16=train_cfg["bf16"],
         gradient_checkpointing=train_cfg["gradient_checkpointing"],
-        optim=train_cfg["optim"],
+        optim="adamw_torch" if is_mac else train_cfg["optim"],
         report_to=train_cfg["report_to"],
         max_steps=max_steps if max_steps else -1,
     )
@@ -249,9 +257,12 @@ def _merge_and_save(config: dict, adapter_path: str, output_path: str):
     train_cfg = config.get("training", {})
     dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
+    is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    device = {"": "mps"} if is_mac else "auto"
+
     base_model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        device_map="auto",
+        device_map=device,
         trust_remote_code=trust_remote,
         torch_dtype=dtype,
     )
