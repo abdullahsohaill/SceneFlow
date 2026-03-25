@@ -188,13 +188,13 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     formatting_func = formatting_func_factory(tokenizer)
 
     # ── Trainer ──
+    tokenizer.model_max_length = train_cfg["max_seq_length"]
     trainer = SFTTrainer(
         model=model,
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
         processing_class=tokenizer,
-        max_seq_length=train_cfg["max_seq_length"],
         formatting_func=formatting_func,
     )
 
