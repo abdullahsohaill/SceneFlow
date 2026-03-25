@@ -6,7 +6,7 @@ model:
   trust_remote_code: true
 
 quantization:
-  load_in_8bit: true
+  load_in_8bit: false
 
 lora:
   r: 16

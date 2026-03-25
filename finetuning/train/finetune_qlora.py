@@ -19,7 +19,7 @@ from pathlib import Path
 import torch
 import yaml
 from datasets import load_dataset
-from peft import LoraConfig, get_peft_model, PeftModel
+from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_training
 from rich.console import Console
 from transformers import (
     AutoModelForCausalLM,
@@ -42,6 +42,8 @@ def load_config(config_path: str) -> dict:
 def setup_quantization(config: dict) -> BitsAndBytesConfig:
     """Create BitsAndBytesConfig from config."""
     quant_cfg = config["quantization"]
+    train_cfg = config.get("training", {})
+    dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
     if quant_cfg.get("load_in_8bit", False):
         return BitsAndBytesConfig(
@@ -50,9 +52,7 @@ def setup_quantization(config: dict) -> BitsAndBytesConfig:
     else:
         return BitsAndBytesConfig(
             load_in_4bit=True,
-            bnb_4bit_compute_dtype=getattr(
-                torch, quant_cfg.get("bnb_4bit_compute_dtype", "bfloat16")
-            ),
+            bnb_4bit_compute_dtype=dtype,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
         )
@@ -151,6 +151,10 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     lora_config = setup_lora(config)
 
     model, tokenizer = load_model_and_tokenizer(config, bnb_config)
+    
+    # ── Prepare robust mixed precision ──
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
+    
     model = get_peft_model(model, lora_config)
     _print_model_info(model)
 
