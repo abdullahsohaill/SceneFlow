@@ -36,9 +36,8 @@ echo ""
 
 # Check ManiBench dataset
 if [ ! -f "ManiBench_Pilot_Dataset.json_ft" ]; then
-    echo "⚠ ManiBench dataset not found (Expected: ManiBench_Pilot_Dataset.json_ft)."
-    echo "  I should have already pre-downloaded it for you."
-    exit 1
+    echo "📥 ManiBench dataset not found. Downloading..."
+    curl -L "https://github.com/nabin2004/ManiBench/raw/main/ManiBench_Pilot_Dataset.json" -o "ManiBench_Pilot_Dataset.json_ft"
 fi
 
 # Run evaluation

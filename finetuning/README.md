@@ -9,6 +9,8 @@ I have already **pre-downloaded and formatted** the training data and benchmark 
 ```bash
 # SINGLE COMMAND: Setup + Baseline + Train Both + Evaluate Both
 cd finetuning
+# Note: First time on a new machine, you need your Hugging Face token:
+# export HF_TOKEN="your_token_here" 
 bash scripts/run_full_pipeline.sh
 ```
 
