@@ -132,13 +132,15 @@ def load_data(config: dict, tokenizer):
     return train_ds, val_ds
 
 
-def format_chat(example: dict, tokenizer) -> str:
-    """Apply the model's chat template to messages."""
-    return tokenizer.apply_chat_template(
-        example["messages"],
-        tokenize=False,
-        add_generation_prompt=False,
-    )
+
+def formatting_func_factory(tokenizer):
+    """Factory for dataset formatting function."""
+    def formatting_func(example):
+        if isinstance(example["messages"], list):
+            # Batched processing
+            return [tokenizer.apply_chat_template(m, tokenize=False, add_generation_prompt=False) for m in example["messages"]]
+        return tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
+    return formatting_func
 
 
 def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
@@ -182,13 +184,8 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         max_steps=max_steps if max_steps else -1,
     )
 
-    # ── Format dataset ──
-    def _format(example):
-        example["text"] = format_chat(example, tokenizer)
-        return example
-
-    train_ds = train_ds.map(_format)
-    val_ds = val_ds.map(_format)
+    # ── Format dataset (via SFTTrainer factory) ──
+    formatting_func = formatting_func_factory(tokenizer)
 
     # ── Trainer ──
     trainer = SFTTrainer(
@@ -198,13 +195,14 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         eval_dataset=val_ds,
         processing_class=tokenizer,
         max_seq_length=train_cfg["max_seq_length"],
-        dataset_text_field="text",
+        formatting_func=formatting_func,
     )
 
     if dry_run:
         console.print("\n[bold yellow]🏃 Dry run — training for a few steps...[/]")
     else:
         console.print(f"\n[bold green]🚀 Starting training...[/]")
+        console.print(f"[dim]Note: Training 3B model in 8-bit precision with batch size {train_cfg['per_device_train_batch_size']}[/]")
 
     # ── Train ──
     trainer.train()
