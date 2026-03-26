@@ -307,7 +307,7 @@ def load_manibench_dataset(path: Path, problem_ids: list[str] | None = None) -> 
         console.print("[yellow]Place ManiBench_Pilot_Dataset.json in the finetuning/ directory[/]")
         raise FileNotFoundError(f"ManiBench dataset not found: {path}")
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     # Handle different dataset formats
@@ -438,7 +438,7 @@ def _save_results(results: list[TrialResult], model: str, strategy: str, output_
         }
         serializable.append(d)
 
-    with open(result_path, "w") as f:
+    with open(result_path, "w", encoding="utf-8") as f:
         json.dump(serializable, f, indent=2)
 
     console.print(f"\n[bold green]💾 Results saved to:[/] {result_path}")

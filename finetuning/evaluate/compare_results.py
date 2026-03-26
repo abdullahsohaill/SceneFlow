@@ -26,7 +26,7 @@ def load_results(results_dir: Path) -> dict[str, list[dict]]:
     model_results = defaultdict(list)
 
     for f in sorted(results_dir.glob("manibench_*.json")):
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             data = json.load(fh)
         if data:
             model_name = data[0].get("model", f.stem)
@@ -172,7 +172,7 @@ def export_markdown(all_results: dict[str, list[dict]], output_path: Path):
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines))
+    output_path.write_text("\n".join(lines), encoding="utf-8")
     console.print(f"\n[bold green]📄 Markdown report:[/] {output_path}")
 
 
