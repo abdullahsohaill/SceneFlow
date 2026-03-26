@@ -91,9 +91,9 @@ def load_model_and_tokenizer(config: dict, bnb_config: BitsAndBytesConfig):
     train_cfg = config.get("training", {})
     dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
-    # Handle Mac MPS Fallback
+    # Handle Mac MPS Fallback, otherwise strictly limit to CUDA to stop CPU memory swapping
     is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
-    device = {"": "mps"} if is_mac else "auto"
+    device = {"": "mps"} if is_mac else {"": "cuda:0"}
     quant_kwargs = {"quantization_config": bnb_config} if not is_mac else {}
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -258,7 +258,7 @@ def _merge_and_save(config: dict, adapter_path: str, output_path: str):
     dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
     is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
-    device = {"": "mps"} if is_mac else "auto"
+    device = {"": "mps"} if is_mac else {"": "cuda:0"}
 
     base_model = AutoModelForCausalLM.from_pretrained(
         model_name,
