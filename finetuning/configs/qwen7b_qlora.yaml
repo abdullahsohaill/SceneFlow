@@ -26,9 +26,9 @@ lora:
 training:
   output_dir: "outputs/qwen7b-manim-ft"
   num_train_epochs: 3
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 4
-  gradient_accumulation_steps: 8
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 16
   learning_rate: 1.5e-4
   weight_decay: 0.01
   warmup_ratio: 0.05
@@ -40,6 +40,7 @@ training:
   save_strategy: "steps"
   save_steps: 200
   save_total_limit: 3
+  max_grad_norm: 0
   fp16: false
   bf16: true
   gradient_checkpointing: true   # needed for 7B to fit in memory
