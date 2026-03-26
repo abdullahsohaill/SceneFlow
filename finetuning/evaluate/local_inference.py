@@ -25,10 +25,9 @@ class LocalInference:
     def __init__(
         self,
         model_path: str,
-        load_in_8bit: bool = True,
+        load_in_8bit: bool = False,
         max_new_tokens: int = 4096,
         temperature: float = 0.0,
-        device_map: str = "auto",
     ):
         self.model_path = model_path
         self.max_new_tokens = max_new_tokens
@@ -49,16 +48,20 @@ class LocalInference:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+        # Hardware-adaptive mapping to prevent Windows memory swap slowdowns
+        is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+        device = {"": "mps"} if is_mac else {"": "cuda:0"}
+
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
             quantization_config=bnb_config,
-            device_map=device_map,
+            device_map=device,
             trust_remote_code=True,
             torch_dtype=torch.bfloat16,
         )
         self.model.eval()
 
-        logger.info("Model loaded successfully")
+        logger.info("Model loaded successfully on %s", "MPS" if is_mac else "CUDA:0")
 
     def generate(self, prompt: str, system_prompt: str | None = None) -> str:
         """

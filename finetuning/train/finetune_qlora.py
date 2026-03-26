@@ -15,6 +15,7 @@ import argparse
 import json
 import logging
 from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 import torch
 import yaml
@@ -39,23 +40,22 @@ def load_config(config_path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def setup_quantization(config: dict) -> BitsAndBytesConfig:
-    """Create BitsAndBytesConfig from config."""
-    quant_cfg = config["quantization"]
+def setup_quantization(config: dict) -> Optional[BitsAndBytesConfig]:
+    """Create BitsAndBytesConfig from config. Returns None if disabled."""
+    quant_cfg = config.get("quantization", {})
     train_cfg = config.get("training", {})
     dtype = torch.bfloat16 if train_cfg.get("bf16", False) else torch.float16
 
     if quant_cfg.get("load_in_8bit", False):
-        return BitsAndBytesConfig(
-            load_in_8bit=True,
-        )
-    else:
+        return BitsAndBytesConfig(load_in_8bit=True)
+    elif quant_cfg.get("load_in_4bit", False):
         return BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_compute_dtype=dtype,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
         )
+    return None
 
 
 def setup_lora(config: dict) -> LoraConfig:
@@ -71,7 +71,7 @@ def setup_lora(config: dict) -> LoraConfig:
     )
 
 
-def load_model_and_tokenizer(config: dict, bnb_config: BitsAndBytesConfig):
+def load_model_and_tokenizer(config: dict, bnb_config: Optional[BitsAndBytesConfig]):
     """Load quantized model and tokenizer."""
     model_name = config["model"]["name"]
     trust_remote = config["model"].get("trust_remote_code", True)
@@ -94,7 +94,7 @@ def load_model_and_tokenizer(config: dict, bnb_config: BitsAndBytesConfig):
     # Handle Mac MPS Fallback, otherwise strictly limit to CUDA to stop CPU memory swapping
     is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
     device = {"": "mps"} if is_mac else {"": "cuda:0"}
-    quant_kwargs = {"quantization_config": bnb_config} if not is_mac else {}
+    quant_kwargs = {"quantization_config": bnb_config} if (bnb_config and not is_mac) else {}
 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
@@ -160,7 +160,7 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     model, tokenizer = load_model_and_tokenizer(config, bnb_config)
     
     # ── Prepare robust mixed precision (CUDA ONLY) ──
-    if not is_mac:
+    if not is_mac and bnb_config is not None:
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
     
     model = get_peft_model(model, lora_config)
@@ -220,7 +220,8 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         console.print("\n[bold yellow]🏃 Dry run — training for a few steps...[/]")
     else:
         console.print(f"\n[bold green]🚀 Starting training...[/]")
-        console.print(f"[dim]Note: Training 3B model in 8-bit precision with batch size {train_cfg['per_device_train_batch_size']}[/]")
+        precision = "8-bit" if (bnb_config and bnb_config.load_in_8bit) else ("4-bit" if (bnb_config and bnb_config.load_in_4bit) else "16-bit (BFloat16)")
+        console.print(f"[dim]Note: Training {config['model']['name'].split('/')[-1]} model in {precision} precision with effective batch size {train_cfg['per_device_train_batch_size'] * train_cfg['gradient_accumulation_steps']}[/]")
 
     # ── Train ──
     trainer.train()
@@ -242,6 +243,17 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     merge_cfg = config.get("merge", {})
     if merge_cfg.get("enabled", False) and not dry_run:
         merge_path = merge_cfg["output_dir"]
+        
+        # ── EXPLICIT MEMORY CLEARING ──
+        # Delete training objects to free GPU VRAM for the merge phase
+        del trainer
+        del model
+        del tokenizer
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
         console.print(f"\n[bold blue]🔗 Merging LoRA into base model → {merge_path}[/]")
         _merge_and_save(config, output_dir, merge_path)
 

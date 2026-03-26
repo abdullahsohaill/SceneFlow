@@ -326,7 +326,7 @@ def run_evaluation(
     problem_ids: list[str] | None = None,
     skip_render: bool = False,
     output_dir: Path = Path("results"),
-    load_in_8bit: bool = True,
+    load_in_8bit: bool = False,
 ) -> list[TrialResult]:
     """
     Run ManiBench evaluation on a local model.
@@ -531,8 +531,8 @@ def main():
         help="Output directory for results"
     )
     parser.add_argument(
-        "--no-quantize", action="store_true",
-        help="Load model in full precision (for small models or testing)"
+        "--quantize", action="store_true",
+        help="Force 8-bit quantization (useful for models >7B on smaller GPUs)"
     )
     args = parser.parse_args()
 
@@ -543,7 +543,7 @@ def main():
         problem_ids=args.problems,
         skip_render=args.skip_render,
         output_dir=args.output,
-        load_in_8bit=not args.no_quantize,
+        load_in_8bit=args.quantize,
     )
 
 
