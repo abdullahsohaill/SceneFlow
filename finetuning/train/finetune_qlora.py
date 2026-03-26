@@ -192,6 +192,7 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         gradient_checkpointing=train_cfg["gradient_checkpointing"],
         optim="adamw_torch" if is_mac else train_cfg["optim"],
         report_to=train_cfg["report_to"],
+        max_grad_norm=train_cfg.get("max_grad_norm", 1.0),
         max_steps=max_steps if max_steps else -1,
     )
 
