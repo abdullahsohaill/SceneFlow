@@ -6,7 +6,7 @@ model:
   trust_remote_code: true
 
 quantization:
-  load_in_8bit: true
+  load_in_8bit: false
 
 lora:
   r: 16
@@ -43,7 +43,7 @@ training:
   fp16: false
   bf16: true
   gradient_checkpointing: true   # needed for 7B to fit in memory
-  optim: "paged_adamw_8bit"
+  optim: "adamw_torch"
   report_to: "none"
 
 data:
