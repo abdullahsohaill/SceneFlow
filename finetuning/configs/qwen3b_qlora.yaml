@@ -27,9 +27,9 @@ lora:
 training:
   output_dir: "outputs/qwen3b-manim-ft"
   num_train_epochs: 3
-  per_device_train_batch_size: 8
-  per_device_eval_batch_size: 8
-  gradient_accumulation_steps: 4
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 8
   learning_rate: 2.0e-4
   weight_decay: 0.01
   warmup_ratio: 0.05
@@ -43,7 +43,7 @@ training:
   save_total_limit: 3
   fp16: false
   bf16: true
-  gradient_checkpointing: false
+  gradient_checkpointing: true
   optim: "adamw_torch"
   report_to: "none"  # set to "wandb" for W&B tracking
 
