@@ -41,8 +41,22 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     TrainingArguments,
+    Trainer,
+    TrainerCallback,
+    DataCollatorForLanguageModeling,
 )
 # SFTTrainer removed for Windows stability
+
+# --- Hard Reset Patches ---
+# Fixes: SystemError during FLOPs calculation on Windows
+Trainer.floating_point_ops = lambda self, inputs: 0
+
+class ClearCacheCallback(TrainerCallback):
+    """Aggressively clear VRAM after every step to prevent thrashing."""
+    def on_step_end(self, args, state, control, **kwargs):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+# -------------------------
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -227,14 +241,13 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     val_ds = _manual_tokenize(val_ds, "eval")
 
     # ── Trainer ──
-    from transformers import Trainer, DataCollatorForLanguageModeling
-    
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
         data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
+        callbacks=[ClearCacheCallback()],
     )
 
     if dry_run:
