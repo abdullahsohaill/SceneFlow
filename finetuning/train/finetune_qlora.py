@@ -24,27 +24,7 @@ import sys
 # Increase recursion limit for large model metadata pickling on Windows
 sys.setrecursionlimit(10000)
 
-# --- Windows PyTorch Bug Patch ---
-# Fixes: TypeError: '<' not supported between instances of 'bool' and '_BufferMeta'
-if hasattr(torch.nn.parameter, "_BufferMeta"):
-    _orig_instancecheck = torch.nn.parameter._BufferMeta.__instancecheck__
-    # Use a thread-local or simple flag to prevent recursion
-    _in_patch = False
-    def _patched_instancecheck(cls, instance):
-        global _in_patch
-        if _in_patch:
-            return False
-        _in_patch = True
-        try:
-            return _orig_instancecheck(cls, instance)
-        except TypeError:
-            # Fallback for the broken Windows comparison
-            return isinstance(instance, torch.Tensor)
-        finally:
-            _in_patch = False
-    torch.nn.parameter._BufferMeta.__instancecheck__ = _patched_instancecheck
-# ---------------------------------
-
+# PyTorch Windows monkey-patch removed (suspected of causing context manager TypeError)
 import yaml
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_training
