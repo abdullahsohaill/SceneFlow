@@ -55,7 +55,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,
 )
-from trl import SFTTrainer
+# SFTTrainer removed for Windows stability
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -169,9 +169,7 @@ def load_data(config: dict, tokenizer):
 
 
 
-def get_text(example):
-    """Top-level, purely picklable formatting function for Windows."""
-    return example["text"]
+# Formatting handled by pre-tokenization map for Windows stability
 
 
 def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
@@ -223,25 +221,33 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
         max_steps=max_steps if max_steps else -1,
     )
 
-    # ── Format dataset manually to avoid Windows dill/multiprocessing crashes ──
+    # ── Format and Tokenize dataset manually to avoid Windows dill/multiprocessing crashes ──
     from datasets import Dataset
     
-    def _convert_to_text_ds(ds):
-        texts = [tokenizer.apply_chat_template(ex["messages"], tokenize=False, add_generation_prompt=False) for ex in ds]
-        return Dataset.from_dict({"text": texts})
+    def _tokenize_fn(example):
+        text = tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
+        return tokenizer(
+            text,
+            truncation=True,
+            max_length=train_cfg["max_seq_length"],
+            padding=False,
+            return_tensors=None,
+        )
 
-    train_ds = _convert_to_text_ds(train_ds)
-    val_ds = _convert_to_text_ds(val_ds)
+    # We map the tokenization to the dataset
+    console.print(f"[dim]  Tokenizing datasets for {train_cfg['max_seq_length']} max length...[/]")
+    train_ds = train_ds.map(_tokenize_fn, remove_columns=train_ds.column_names, desc="Tokenizing train")
+    val_ds = val_ds.map(_tokenize_fn, remove_columns=val_ds.column_names, desc="Tokenizing eval")
 
     # ── Trainer ──
-    tokenizer.model_max_length = train_cfg["max_seq_length"]
-    trainer = SFTTrainer(
+    from transformers import Trainer, DataCollatorForLanguageModeling
+    
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
-        processing_class=tokenizer,
-        formatting_func=get_text,
+        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
     )
 
     if dry_run:
