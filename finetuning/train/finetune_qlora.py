@@ -224,20 +224,19 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     # ── Format and Tokenize dataset manually to avoid Windows dill/multiprocessing crashes ──
     from datasets import Dataset
     
-    def _tokenize_fn(example):
-        text = tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=False)
-        return tokenizer(
-            text,
-            truncation=True,
-            max_length=train_cfg["max_seq_length"],
-            padding=False,
-            return_tensors=None,
-        )
+    # ── Final Robust Tokenization for Windows ──
+    console.print(f"[dim]  Tokenizing datasets (manual loop for Windows stability)...[/]")
+    def _manual_tokenize(ds, desc):
+        items = []
+        for i in range(len(ds)):
+            ex = ds[i]
+            text = tokenizer.apply_chat_template(ex["messages"], tokenize=False, add_generation_prompt=False)
+            tokenized = tokenizer(text, truncation=True, max_length=train_cfg["max_seq_length"], padding=False)
+            items.append(tokenized)
+        return Dataset.from_list(items)
 
-    # We map the tokenization to the dataset
-    console.print(f"[dim]  Tokenizing datasets for {train_cfg['max_seq_length']} max length...[/]")
-    train_ds = train_ds.map(_tokenize_fn, remove_columns=train_ds.column_names, desc="Tokenizing train")
-    val_ds = val_ds.map(_tokenize_fn, remove_columns=val_ds.column_names, desc="Tokenizing eval")
+    train_ds = _manual_tokenize(train_ds, "train")
+    val_ds = _manual_tokenize(val_ds, "eval")
 
     # ── Trainer ──
     from transformers import Trainer, DataCollatorForLanguageModeling
