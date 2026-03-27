@@ -24,7 +24,14 @@ import sys
 # Increase recursion limit for large model metadata pickling on Windows
 sys.setrecursionlimit(10000)
 
-# PyTorch Windows monkey-patch removed (suspected of causing context manager TypeError)
+# --- Minimal Windows PyTorch Patch ---
+# Fixes: TypeError: '<' not supported between instances of 'bool' and '_BufferMeta'
+if hasattr(torch.nn.parameter, "_BufferMeta"):
+    # missing comparison operators on Windows for this metaclass
+    torch.nn.parameter._BufferMeta.__lt__ = lambda self, other: False
+    torch.nn.parameter._BufferMeta.__gt__ = lambda self, other: False
+# ---------------------------------
+
 import yaml
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_training
@@ -165,7 +172,8 @@ def train(config: dict, max_steps: int | None = None, dry_run: bool = False):
     model, tokenizer = load_model_and_tokenizer(config, bnb_config)
     
     # ── Prepare robust mixed precision (CUDA ONLY) ──
-    if not is_mac and bnb_config is not None:
+    if not is_mac:
+        # PEFT recommendation: always prepare for kbit if using grad checkpointing
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=train_cfg.get("gradient_checkpointing", False))
     
     model = get_peft_model(model, lora_config)
