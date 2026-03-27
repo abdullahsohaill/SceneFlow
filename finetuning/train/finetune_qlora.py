@@ -18,6 +18,20 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import torch
+import torch.nn.parameter
+
+# --- Windows PyTorch Bug Patch ---
+# Fixes: TypeError: '<' not supported between instances of 'bool' and '_BufferMeta'
+if hasattr(torch.nn.parameter, "_BufferMeta"):
+    _orig_instancecheck = torch.nn.parameter._BufferMeta.__instancecheck__
+    def _patched_instancecheck(cls, instance):
+        try:
+            return _orig_instancecheck(cls, instance)
+        except TypeError:
+            return isinstance(instance, torch.Tensor)
+    torch.nn.parameter._BufferMeta.__instancecheck__ = _patched_instancecheck
+# ---------------------------------
+
 import yaml
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_training
