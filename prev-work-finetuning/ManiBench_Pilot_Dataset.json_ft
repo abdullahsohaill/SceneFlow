@@ -1,0 +1,3408 @@
+{
+  "benchmark_name": "ManiBench",
+  "version": "1.0-pilot",
+  "schema_version": "2.0",
+  "last_updated": "2026-02-19",
+  "description": "A benchmark dataset for evaluating visual-logic drift and syntactic hallucinations in Manim code generation. Each problem is derived from a 3Blue1Brown video and specifies required visual events, coverage requirements, and success criteria for evaluating LLM-generated Manim CE code.",
+  "target_framework": "manim-ce",
+  "total_problems": 12,
+  "problems_with_raw_code": 12,
+  "difficulty_distribution": {
+    "level_1": 0,
+    "level_2": 2,
+    "level_3": 4,
+    "level_4": 4,
+    "level_5": 2
+  },
+  "category_distribution": {
+    "direct_visualization": 10,
+    "drift_sensitive": 5,
+    "multi_scene": 3,
+    "debugging": 0,
+    "version_conflict_traps": 0
+  },
+  "category_notes": "Categories are non-exclusive. A single problem can be tagged with multiple categories (e.g., both direct-visualization and drift-sensitive). Counts above reflect how many problems carry each tag.",
+  "domain_coverage": [
+    "physics",
+    "numerics",
+    "machine-learning",
+    "calculus",
+    "signal-processing",
+    "linear-algebra",
+    "transformations",
+    "visualization",
+    "probability",
+    "statistics",
+    "bayes-theorem",
+    "function-composition",
+    "integration",
+    "series",
+    "topology",
+    "vector-fields",
+    "geometry",
+    "combinatorics"
+  ],
+  "evaluation_metrics": [
+    {
+      "name": "executability",
+      "type": "binary",
+      "description": "Does code run without exceptions or deprecated imports in Manim CE?"
+    },
+    {
+      "name": "version_conflict_error_rate",
+      "type": "percentage",
+      "description": "Fraction of runs triggering version-specific errors (GL vs CE, deprecated APIs)"
+    },
+    {
+      "name": "alignment_score",
+      "type": "0.0-1.0",
+      "description": "Weighted fraction of required visual events present and correctly timed"
+    },
+    {
+      "name": "coverage_score",
+      "type": "0.0-1.0",
+      "description": "Density of pedagogical elements (labels, formulas, numeric evidence)"
+    }
+  ],
+  "problems": [
+    {
+      "id": "MB-001",
+      "title": "Colliding Blocks Compute π",
+      "youtube_video_id": "6dTyOl1fmDo",
+      "category": [
+        "drift-sensitive",
+        "multi-scene"
+      ],
+      "difficulty_level": 4,
+      "domain": [
+        "physics",
+        "numerics"
+      ],
+      "estimated_complexity": "high",
+      "brief_description": "Animate elastic collision of two blocks sliding on a frictionless surface. Block A (mass M) and Block B (mass m) collide elastically. When m/M = 100:1, exactly 31 collisions occur (first 2 digits of π). At higher mass ratios (10^2n : 1), collision counts yield more digits of π. Animate collision counter, velocity updates, phase-space diagram, conservation laws, and the geometric circle-line intersection argument.",
+      "full_prompt": "Write Manim code to animate the collision of two blocks sliding on a frictionless surface. Block A (mass M) starts at rest. Block B (mass m) approaches from the left with velocity v₀. After elastic collision, count the total number of collisions that occur. The problem's magical property: if m/M = 100, exactly 31 collisions occur (digits of π). Animate:\n1. Block A (mass M) at x = 10, Block B (mass m) at x = 0 moving right\n2. Show velocity vectors above each block\n3. Show collision counter incrementing at each collision\n4. Show velocity updates after each collision (calculated via elastic collision formulas)\n5. Show final state with block B at rest and block A moving away\n6. Display text: '# Collisions = {n}'\n7. Show conservation of kinetic energy equation: ½m₁v₁² + ½m₂v₂² = E\n8. Show conservation of momentum equation: m₁v₁ + m₂v₂ = P\n9. Introduce phase-space coordinate plane (x = √m₁·v₁, y = √m₂·v₂) and show state point tracing an ellipse → circle\n10. Show momentum conservation as a line with slope −√(m₁/m₂) intersecting the energy circle\n11. Show that collision count = number of line-circle bounces before reaching end zone (v₁ ≤ v₂)\n12. Demonstrate multiple mass ratios: 1:1 (3 collisions), 16:1, 100:1 (31), 10000:1 (314), up to 10^10\n13. Show arc-angle argument: each bounce subtends angle 2θ where θ = arctan(√(m₂/m₁))\n14. Show slow-motion replay for high mass ratios",
+      "raw_code_status": "collected",
+      "raw_code_path": "raw_code/colliding_blocks_v2/",
+      "raw_code_files": [
+        "blocks.py",
+        "supplements.py",
+        "grover.py",
+        "digits_of_pi.txt"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 2193,
+        "scene_classes": [
+          {
+            "class_name": "StateTracker",
+            "type": "helper",
+            "description": "ValueTracker subclass encoding collision state as a 4D vector [x₁√m₁, x₂√m₂, v₁√m₁, v₂√m₂]. Uses angle-based collision counting: n_collisions = floor(atan2(y,x) / θ) where θ = atan2(√m₂, √m₁). Reflects velocity vectors via 2D rotation to avoid iterative collision simulation.",
+            "key_methods": [
+              "set_time",
+              "reflect_vect",
+              "get_block_positions",
+              "get_block_velocities",
+              "get_n_collisions",
+              "get_kinetic_energy",
+              "get_momentum"
+            ]
+          },
+          {
+            "class_name": "ClackAnimation",
+            "type": "helper",
+            "description": "Expanding yellow circle rings at collision point, run_time=0.25s. Provides audio-visual collision feedback."
+          },
+          {
+            "class_name": "Blocks",
+            "type": "main_scene",
+            "description": "Primary scene (~700 lines). Sets up 3D floor/wall, block pair, state tracker, time tracker. Constructs multi-act animation: (1) introductory camera orbit, (2) conservation equations with live numeric substitution, (3) velocity vectors with color-coded labels, (4) phase-space coordinate plane showing state point on energy ellipse, (5) rescaling to circle (√m·v coordinates), (6) momentum conservation line, (7) end zone identification (v₁ ≤ v₂ region).",
+            "key_features": [
+              "3D rendered blocks (Cube + VCube shell) on Square3D floor",
+              "Real-time velocity vector arrows with DecimalNumber labels",
+              "Live numeric equation substitution (make_number_changeable)",
+              "Phase-space NumberPlane with TracedPath",
+              "Ellipse → circle coordinate rescaling animation",
+              "Momentum line with slope = −√(m₁/m₂)",
+              "End zone polygon (v₁ = v₂ boundary)",
+              "Clack sound effects synchronized to collision events"
+            ]
+          },
+          {
+            "class_name": "BasicBlockCount",
+            "type": "scene",
+            "description": "Simplified scene showing blocks colliding with a '# Collisions = N' counter label (fix_in_frame). Counter uses f_always updater bound to state_tracker.get_n_collisions."
+          },
+          {
+            "class_name": "BasicBlockCount1e2",
+            "type": "scene",
+            "description": "Mass ratio 100:1 → 31 collisions (digits: 3,1 of π)."
+          },
+          {
+            "class_name": "BasicBlockCount1e4",
+            "type": "scene",
+            "description": "Mass ratio 10000:1 → 314 collisions (digits: 3,1,4 of π)."
+          },
+          {
+            "class_name": "BasicBlockCount1e6",
+            "type": "scene",
+            "description": "Mass ratio 10⁶:1 → 3141 collisions (digits: 3,1,4,1 of π)."
+          },
+          {
+            "class_name": "BasicBlockCount1e8",
+            "type": "scene",
+            "description": "Mass ratio 10⁸:1 → 31415 collisions (digits of π)."
+          },
+          {
+            "class_name": "BasicBlockCount1e10",
+            "type": "scene",
+            "description": "Mass ratio 10¹⁰:1 → 314159 collisions (digits of π)."
+          },
+          {
+            "class_name": "SlowMoBlockCount",
+            "type": "scene",
+            "description": "Slow-motion replay for mass ratio 10⁴:1. Uses rate_tracker to scale dt, showing '100x Slower' label. Zooms camera to collision region."
+          },
+          {
+            "class_name": "SlowMoBlockCount1e6",
+            "type": "scene",
+            "description": "Multi-speed slow-motion for 10⁶:1 ratio. Steps through 100x, 1000x, 10000x slowdown factors."
+          },
+          {
+            "class_name": "IntroduceSetup",
+            "type": "scene",
+            "description": "Setup introduction: labels frictionless plane, shows 'Initially stationary' annotation for small block, velocity arrow for big block."
+          },
+          {
+            "class_name": "CirclePuzzle",
+            "type": "scene",
+            "description": "Geometric argument scene (~500 lines). Visualizes line-circle intersection counting: plots lines bouncing inside circle with slope = −√(m₁/m₂), shows end zone, arc subtension of 2θ per bounce, stacked arcs, and the arctan(√(m₂/m₁)) relationship."
+          },
+          {
+            "class_name": "MovementOfWall",
+            "type": "scene",
+            "description": "Shows wall as equivalent to a massive block. Nudges wall, then replaces with a growing cube to illustrate wall = infinite-mass block."
+          },
+          {
+            "class_name": "PreviewClip",
+            "type": "scene",
+            "description": "Cinematic preview clip: mass ratio 100:1 with camera orbit from 3D angle."
+          },
+          {
+            "class_name": "ThumbnailShot",
+            "type": "scene",
+            "description": "Static thumbnail composition with speed lines behind moving block."
+          }
+        ],
+        "physics_model": {
+          "collision_detection": "Angle-based in scaled phase space: collisions occur at multiples of θ = atan2(√m₂, √m₁). No iterative position-checking needed.",
+          "elastic_collision_formulas": "Implemented via 2D rotation of scaled velocity vector by −2θ per collision, with alternating y-reflection for wall bounces.",
+          "conservation_laws": {
+            "kinetic_energy": "½m₁v₁² + ½m₂v₂² = E (displayed as ellipse in v-space, circle in √m·v-space)",
+            "momentum": "m₁v₁ + m₂v₂ = P (displayed as line with slope −√(m₁/m₂) in √m·v-space)"
+          },
+          "end_condition": "Collisions end when state point enters the end zone: v₁ ≤ v₂ (both blocks moving right, big block slower than small block)."
+        },
+        "visual_techniques": [
+          "3D block rendering with Cube + VCube wireframe shell",
+          "Camera orbit (frame.reorient) for cinematic introduction",
+          "Real-time DecimalNumber updaters for live equation values",
+          "TracedPath for state-point trajectory in phase space",
+          "Ellipse-to-circle animation via stretch transform",
+          "SurroundingRectangle highlights for equation term focus",
+          "Clack sound effects with collision-synchronized timing",
+          "Slow-motion via rate_tracker scaling dt",
+          "Arc-stacking to visualize angle accumulation",
+          "End zone polygon with green fill"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "f_always",
+            "add_updater",
+            "UpdateFromFunc",
+            "make_number_changeable"
+          ],
+          "animation_types": [
+            "Transform",
+            "TransformFromCopy",
+            "TransformMatchingTex",
+            "ShowCreation",
+            "FadeIn",
+            "FadeOut",
+            "GrowArrow",
+            "Rotate",
+            "VFadeIn",
+            "VFadeOut",
+            "Write"
+          ],
+          "3d_constructs": [
+            "Cube",
+            "VCube",
+            "Square3D",
+            "set_floor_plane",
+            "apply_depth_test",
+            "set_shading",
+            "make_3d",
+            "TrueDot",
+            "GlowDot"
+          ],
+          "layout_methods": [
+            "fix_in_frame",
+            "to_corner",
+            "next_to",
+            "arrange"
+          ],
+          "custom_classes": [
+            "StateTracker(ValueTracker)",
+            "ClackAnimation(Restore)"
+          ]
+        }
+      },
+      "required_visual_events": [
+        {
+          "id": "evt_001_setup",
+          "description": "3D floor, wall, and two blocks rendered with mass labels",
+          "weight": 0.6,
+          "is_critical": true,
+          "timing": "scene_start",
+          "reference_code_lines": "blocks.py: Blocks.setup(), get_floor_and_wall_3d(), get_block_pair()"
+        },
+        {
+          "id": "evt_001_collision",
+          "description": "Blocks move and collide with visual/audio feedback (expanding yellow rings at collision point)",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "continuous_throughout",
+          "reference_code_lines": "blocks.py: ClackAnimation, check_for_clacks()"
+        },
+        {
+          "id": "evt_001_counter",
+          "description": "Collision counter '# Collisions = N' increments correctly in real-time via updater",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "synchronized_with_collisions",
+          "reference_code_lines": "blocks.py: BasicBlockCount.add_count_label()"
+        },
+        {
+          "id": "evt_001_velocity",
+          "description": "Red velocity vectors above each block update magnitude and direction after each collision, with DecimalNumber labels showing numeric values",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "continuous_throughout",
+          "reference_code_lines": "blocks.py: Blocks.get_velocity_vector()"
+        },
+        {
+          "id": "evt_001_conservation_eqs",
+          "description": "Conservation equations displayed: KE (½m₁v₁² + ½m₂v₂² = E) and momentum (m₁v₁ + m₂v₂ = P) with color-coded terms (mass=BLUE, velocity=RED) and live numeric substitution",
+          "weight": 0.7,
+          "is_critical": false,
+          "timing": "after_initial_collisions",
+          "reference_code_lines": "blocks.py: Blocks.construct() equations section"
+        },
+        {
+          "id": "evt_001_phase_space",
+          "description": "Phase-space coordinate plane (NumberPlane) introduced with axes x=v₁, y=v₂; state point (red TrueDot+GlowDot) traces collision trajectory; ellipse shows energy conservation",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "mid_scene",
+          "reference_code_lines": "blocks.py: Blocks.construct() coordinate plane section"
+        },
+        {
+          "id": "evt_001_circle_rescale",
+          "description": "Phase space rescaled from ellipse to circle via coordinate transform x=√m₁·v₁, y=√m₂·v₂; equation x²+y²=2E displayed; 'Equation for a circle' label",
+          "weight": 0.6,
+          "is_critical": false,
+          "timing": "after_phase_space_intro",
+          "reference_code_lines": "blocks.py: Blocks.construct() stretch into circle section"
+        },
+        {
+          "id": "evt_001_momentum_line",
+          "description": "Momentum conservation rendered as green line with slope −√(m₁/m₂) intersecting energy circle; two intersection points identified",
+          "weight": 0.7,
+          "is_critical": false,
+          "timing": "after_circle_rescale",
+          "reference_code_lines": "blocks.py: Blocks.construct() momentum line section"
+        },
+        {
+          "id": "evt_001_endzone",
+          "description": "End zone (v₁ ≤ v₂ region) shown as green-filled polygon with v₁=v₂ boundary line; collisions stop when state enters this zone",
+          "weight": 0.5,
+          "is_critical": false,
+          "timing": "end_of_main_scene",
+          "reference_code_lines": "blocks.py: Blocks.construct() end zone section"
+        },
+        {
+          "id": "evt_001_mass_ratios",
+          "description": "Multiple mass ratios demonstrated: 1:1→3, 16:1, 100:1→31, 10⁴:1→314, 10⁶:1→3141, 10⁸:1→31415, 10¹⁰:1→314159",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "progression_scenes",
+          "reference_code_lines": "blocks.py: BasicBlockCount1e1 through BasicBlockCount1e10"
+        },
+        {
+          "id": "evt_001_slow_motion",
+          "description": "Slow-motion replay at 100x–10000x slower for high mass ratios, with '100x Slower' label and camera zoom to collision region",
+          "weight": 0.5,
+          "is_critical": false,
+          "timing": "after_mass_ratio_demos",
+          "reference_code_lines": "blocks.py: SlowMoBlockCount, SlowMoBlockCount1e6"
+        },
+        {
+          "id": "evt_001_circle_puzzle",
+          "description": "Geometric argument: lines bouncing inside circle with slope −√(m₁/m₂), arc subtension of 2θ per bounce, end zone wedge, θ=arctan(√(m₂/m₁)) derivation",
+          "weight": 0.7,
+          "is_critical": false,
+          "timing": "explanation_scene",
+          "reference_code_lines": "blocks.py: CirclePuzzle class"
+        },
+        {
+          "id": "evt_001_final",
+          "description": "Final collision count displayed confirming digits of π; connection between collision count and π made explicit",
+          "weight": 0.6,
+          "is_critical": true,
+          "timing": "scene_end",
+          "reference_code_lines": "blocks.py: BasicBlockCount.add_count_label()"
+        }
+      ],
+      "coverage_requirements": [
+        "Collision counter visible and updates in real-time",
+        "Velocity labels or vectors shown (red arrows with numeric labels)",
+        "Mathematical annotations: mass values (kg labels on blocks), velocity values (DecimalNumber)",
+        "Conservation equations displayed with color-coded terms (mass=BLUE, velocity=RED)",
+        "Phase-space diagram with energy ellipse/circle and momentum line",
+        "Clear start state (big block at rest, small block approaching) and end state (blocks separated)",
+        "Multiple mass ratios demonstrating digit extraction pattern",
+        "Geometric circle-line argument with arc angles"
+      ],
+      "success_criteria": {
+        "executability_min": 0.7,
+        "alignment_score_min": 0.7,
+        "coverage_score_min": 0.75,
+        "version_conflict_error_rate_max": 0.05
+      },
+      "common_failure_modes": [
+        "Collisions occur but counter doesn't update (missing f_always updater pattern)",
+        "Velocity vectors missing or not updating (updater not bound to state tracker)",
+        "Final count not displayed",
+        "Blocks overlap incorrectly or physics unrealistic (no proper collision detection)",
+        "Phase-space ellipse not shown or not rescaled to circle",
+        "Momentum line slope incorrect (sign error or missing √ on masses)",
+        "Conservation equations present but numeric values don't update live",
+        "Mass ratio progression skipped (only one ratio shown)",
+        "Using manim_imports_ext (3B1B fork) instead of Manim CE imports",
+        "Missing 3D rendering (flat 2D blocks instead of Cube objects)",
+        "Clack/collision feedback animation absent",
+        "End zone condition not visualized",
+        "Arc-angle geometric argument omitted entirely"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "InteractiveScene → Scene (CE has no InteractiveScene)",
+          "manim_imports_ext → from manim import *",
+          "f_always updater pattern → add_updater() with lambda",
+          "self.frame → self.camera.frame (CE camera access)",
+          "frame.reorient() → frame.set_euler_angles() or move_to/shift",
+          "set_floor_plane('xz') → not available in CE",
+          "fix_in_frame() → not available in CE (use always_redraw or manual positioning)",
+          "Cube/VCube → CE Cube (different constructor)",
+          "Square3D → CE Surface or Rectangle",
+          "TrueDot/GlowDot → Dot (CE equivalent)",
+          "make_number_changeable → DecimalNumber with add_updater",
+          "set_backstroke → not available in CE",
+          "self.set_floor_plane → not available in CE",
+          "light_source manipulation → different CE camera API",
+          "field_of_view control → CE ThreeDScene camera config"
+        ]
+      },
+      "pedagogical_intent": "Demonstrate that elastic collisions preserve momentum and energy, leading to a surprising mathematical result (collision counts yield digits of π). The video builds from physical intuition (blocks colliding) through conservation law visualization (equations with live values) to geometric abstraction (phase-space circle with bouncing lines and angle accumulation). The key insight: each collision corresponds to a 2θ arc on a circle, so total collisions ≈ π/θ, and for mass ratio 10^(2n):1, θ ≈ 10^(-n), giving n+1 digits of π."
+    },
+    {
+      "id": "MB-002",
+      "title": "Gradient Descent, How Neural Networks Learn",
+      "youtube_video_id": "IHZwWFHWa-w",
+      "category": [
+        "direct-visualization",
+        "drift-sensitive"
+      ],
+      "difficulty_level": 3,
+      "domain": [
+        "machine-learning",
+        "calculus"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate gradient descent on a 2D loss landscape. Show loss surface, dot starting at high-loss location, gradient arrows, and step-by-step parameter movement downhill. Loss curve updates synchronized with parameter updates.",
+      "full_prompt": "Create a Manim scene animating gradient descent on a 2D loss landscape. Show:\n1. A parametric surface z = L(w₁, w₂) representing loss as a function of two parameters\n2. A dot starting at a high-loss location\n3. At each step: (a) compute gradient ∇L at the dot's position, (b) move dot in direction of -∇L, (c) update a loss curve showing historical loss values\n4. Animate 5–10 steps of descent with diminishing step size\n5. Show arrows indicating gradient direction\n6. Label axes: 'w₁', 'w₂', 'Loss'",
+      "required_visual_events": [
+        {
+          "id": "evt_002_surface",
+          "description": "3D loss surface/landscape visualized as parametric surface z = L(w₁, w₂)",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_002_initial_dot",
+          "description": "Dot positioned at initial high-loss location on the surface",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "after_surface_render"
+        },
+        {
+          "id": "evt_002_gradient_arrow",
+          "description": "Gradient arrow (∇L) shown at dot's position and updates direction/magnitude each step",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "each_descent_step"
+        },
+        {
+          "id": "evt_002_downhill",
+          "description": "Dot moves downhill along −∇L direction on the surface",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "each_descent_step_after_gradient"
+        },
+        {
+          "id": "evt_002_loss_curve",
+          "description": "Separate loss curve (Loss vs iteration) plots historical values, updating synchronously with dot movement",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "synchronized_with_downhill"
+        },
+        {
+          "id": "evt_002_step_shrink",
+          "description": "Step size (learning rate) diminishes visually — shorter gradient arrows or explicit α label decreasing",
+          "weight": 0.6,
+          "is_critical": false,
+          "timing": "progressive_across_steps"
+        }
+      ],
+      "coverage_requirements": [
+        "Axis labels present ('w₁', 'w₂', 'Loss')",
+        "Gradient arrows visible and pointing in −∇L direction",
+        "Loss curve displayed and updating synchronously with dot",
+        "Step count or iteration number displayed",
+        "Learning rate value or α label shown"
+      ],
+      "success_criteria": {
+        "executability_min": 0.95,
+        "alignment_score_min": 0.75,
+        "coverage_score_min": 0.8,
+        "version_conflict_error_rate_max": 0.02
+      },
+      "common_failure_modes": [
+        "Dot moves but loss curve doesn't update (temporal drift) [CRITICAL DRIFT]",
+        "Gradient arrows point uphill instead of downhill (sign error in ∇L)",
+        "Surface renders but is not a meaningful loss landscape (flat or random)",
+        "Events occur out of sync (dot moves before gradient arrow updates)",
+        "Step size doesn't shrink (constant learning rate when decay is specified)",
+        "Loss curve shows random values instead of actual L(w₁,w₂) at dot position",
+        "3D surface rendering fails or times out (ThreeDScene config issues)",
+        "Dot floats above/below surface instead of staying on it"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "CONFIG dict class pattern → __init__ parameters in CE",
+          "ContinualEdgeUpdate → custom updater in CE",
+          "Eyes/PiCreature ecosystem → not available in CE",
+          "NetworkScene/NetworkMobject → custom implementation needed",
+          "MNistMobject/PixelsFromVect → custom pixel rendering in CE",
+          "ExternallyAnimatedScene/TODOStub → not available in CE",
+          "FRAME_X_RADIUS/FRAME_Y_RADIUS → config.frame_width/2 in CE",
+          "TeacherStudentsScene → custom implementation needed",
+          "force_skipping/revert_to_original_skipping_status → not in CE",
+          "GraphScene API → Axes object methods in CE",
+          "UnitInterval → NumberLine in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that neural networks learn by iteratively moving in the direction of steepest descent. Emphasize the relationship between gradient, parameter updates, and loss reduction. Demonstrate learning rate decay. The synchronized loss curve is essential to show cause-and-effect: parameter update → loss decreases.",
+      "raw_code_path": "raw_code/nn/",
+      "raw_code_files": [
+        "part2.py",
+        "part3.py",
+        "network.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 8598,
+        "scene_classes": [
+          {
+            "class_name": "Network",
+            "type": "helper",
+            "description": "Core feedforward neural network with SGD, backpropagation, and configurable non-linearity (sigmoid/ReLU). Supports pretrained weight loading and activation extraction.",
+            "key_methods": [
+              "feedforward",
+              "get_activation_of_all_layers",
+              "SGD",
+              "backprop",
+              "evaluate"
+            ]
+          },
+          {
+            "class_name": "PreviewLearning",
+            "type": "main_scene",
+            "description": "Core scene showing live neural network training with weight visualization, edge activation propagation, and backpropagation. Base class for many other scenes.",
+            "key_methods": [
+              "construct",
+              "initialize_network",
+              "show_training",
+              "activate_network",
+              "backprop_one_example",
+              "color_network_edges"
+            ]
+          },
+          {
+            "class_name": "IntroduceCostFunction",
+            "type": "main_scene",
+            "description": "Explains weights/biases/sigmoid for a single neuron, feeds in an example, introduces cost function with squared differences, and averages over training data.",
+            "key_methods": [
+              "construct",
+              "isolate_one_neuron",
+              "break_down_cost_function",
+              "average_over_all_training_data"
+            ]
+          },
+          {
+            "class_name": "FunctionMinmization",
+            "type": "main_scene",
+            "description": "GraphScene showing dots rolling down a cost curve toward minima using continuous updaters, visualizing gradient descent on a 1D function.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "SingleVariableCostFunction",
+            "type": "main_scene",
+            "description": "GraphScene demonstrating gradient descent on a single-variable cost function with tangent lines, step sizes, and ball-rolling analogy.",
+            "key_methods": [
+              "construct",
+              "take_steps_based_on_slope",
+              "ball_rolling_down_hill"
+            ]
+          },
+          {
+            "class_name": "TwoVariableInputSpace",
+            "type": "main_scene",
+            "description": "Shows gradient descent in 2D input space on a NumberPlane, with directional arrows and gradient vector.",
+            "key_methods": [
+              "construct",
+              "show_gradient"
+            ]
+          },
+          {
+            "class_name": "ShowFullCostFunctionGradient",
+            "type": "main_scene",
+            "description": "Transforms network edges into a column vector of weights/biases, then shows the negative gradient as nudges.",
+            "key_methods": [
+              "construct",
+              "organize_weights_as_column_vector",
+              "show_gradient"
+            ]
+          },
+          {
+            "class_name": "GradientNudging",
+            "type": "main_scene",
+            "description": "Shows repeated gradient descent steps: gradient vector of decimals, network weight nudges, recomputation.",
+            "key_methods": [
+              "construct",
+              "change_weights_repeatedly"
+            ]
+          },
+          {
+            "class_name": "TestPerformance",
+            "type": "main_scene",
+            "description": "Runs pretrained network through MNIST test data, tracking accuracy in real-time.",
+            "key_methods": [
+              "construct",
+              "run_through_examples"
+            ]
+          },
+          {
+            "class_name": "InterpretFirstWeightMatrixRows",
+            "type": "main_scene",
+            "description": "Visualizes first weight matrix as pixel arrays showing what patterns each neuron looks for.",
+            "key_methods": [
+              "construct",
+              "show_all_pixel_array"
+            ]
+          },
+          {
+            "class_name": "InputRandomData",
+            "type": "main_scene",
+            "description": "Feeds random noise into network to show confident but wrong classification, demonstrating limitations.",
+            "key_methods": [
+              "construct",
+              "feed_in_random_data"
+            ]
+          },
+          {
+            "class_name": "WalkThroughTwoExample",
+            "type": "main_scene",
+            "description": "Longest scene: walks through a single '2' example showing activation formula, three ways to increase activation, Hebbian learning, desired nudges, recursion.",
+            "key_methods": [
+              "construct",
+              "show_activation_formula",
+              "three_ways_to_increase",
+              "fire_together_wire_together",
+              "show_recursion"
+            ]
+          },
+          {
+            "class_name": "SimplestNetworkExample",
+            "type": "main_scene",
+            "description": "Centerpiece of part3: collapses to 1-1-1-1 chain, introduces computational graph, derives chain rule ∂C/∂w, computes partial derivatives.",
+            "key_methods": [
+              "construct",
+              "collapse_ordinary_network",
+              "break_into_computational_graph",
+              "show_chain_rule",
+              "compute_derivatives"
+            ]
+          },
+          {
+            "class_name": "GeneralFormulas",
+            "type": "main_scene",
+            "description": "Extends to [3,3,2] network, shows subscript notation, full chain rule for ∂C/∂w_{jk}, derivative w.r.t. previous activation with summation.",
+            "key_methods": [
+              "construct",
+              "show_weight_chain_rule",
+              "show_derivative_wrt_prev_activation"
+            ]
+          },
+          {
+            "class_name": "OrganizeDataIntoMiniBatches",
+            "type": "main_scene",
+            "description": "Shows MNIST examples shuffled into mini-batches with gradient descent step per batch.",
+            "key_methods": [
+              "construct",
+              "divide_into_minibatches"
+            ]
+          },
+          {
+            "class_name": "ConstructGradientFromAllTrainingExamples",
+            "type": "main_scene",
+            "description": "Shows how each training example requests weight changes, averaged into the gradient vector.",
+            "key_methods": [
+              "construct",
+              "show_all_examples_requesting_changes",
+              "collapse_into_gradient_vector"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Network edge coloring by weight sign (blue positive, red negative) and magnitude (stroke width)",
+          "Edge propagation animations (yellow flash traveling along edges)",
+          "Live neuron activation fill-opacity tied to activation values",
+          "DecimalNumber overlays inside neurons showing activation values",
+          "PixelsFromVect for MNIST digit display",
+          "MNistMobject for formatted digit images",
+          "Eyes mobject on network for anthropomorphization",
+          "ContinualEdgeUpdate for continuous weight animation",
+          "GraphScene with tangent lines for gradient descent visualization",
+          "NumberPlane with gradient arrows for 2D input space",
+          "Weight matrix visualization as color-coded pixel grids",
+          "Ball rolling analogy with multiple simultaneous gradient descent paths",
+          "Network collapse animation (full network → simple 1-1-1-1 chain)",
+          "Computational graph layout (tree of w, a, b → z → a → C₀)",
+          "Number line + dot representation for chain rule sensitivity analysis",
+          "Mini-batch visualization with row grouping and braces"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "Mobject.add_updater",
+            "UpdateFromFunc",
+            "UpdateFromAlphaFunc",
+            "ChangingDecimal",
+            "ContinualEdgeUpdate"
+          ],
+          "animation_types": [
+            "Transform",
+            "ReplacementTransform",
+            "FadeIn",
+            "FadeOut",
+            "Write",
+            "ShowCreation",
+            "GrowArrow",
+            "LaggedStartMap",
+            "MoveToTarget",
+            "Indicate",
+            "DrawBorderThenFill",
+            "PiCreatureSays"
+          ],
+          "3d_constructs": [],
+          "layout_methods": [
+            "arrange",
+            "arrange_in_grid",
+            "next_to",
+            "to_edge",
+            "to_corner",
+            "shift",
+            "move_to",
+            "align_to",
+            "scale"
+          ],
+          "custom_classes": [
+            "NetworkScene",
+            "NetworkMobject",
+            "MNistNetworkMobject",
+            "MNistMobject",
+            "PixelsFromVect",
+            "Eyes",
+            "ContinualEdgeUpdate",
+            "ChangingDecimalWithColor",
+            "TeacherStudentsScene",
+            "GraphScene"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-003",
+      "title": "But What Is a Convolution?",
+      "youtube_video_id": "KuXjwB4LzSA",
+      "category": [
+        "direct-visualization",
+        "drift-sensitive"
+      ],
+      "difficulty_level": 3,
+      "domain": [
+        "signal-processing",
+        "linear-algebra"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate the convolution operation. Show signal, kernel/filter sliding left-to-right, element-wise product at each position, and output graph building up point-by-point. Window movement is CRITICAL — a static visualization completely misses the point.",
+      "full_prompt": "Animate the convolution operation between a signal and a kernel. Show:\n1. A 1D signal plotted on a horizontal axis (bar chart or curve)\n2. A 1D kernel (filter) displayed as a sliding window\n3. The sliding window moves left-to-right along the signal\n4. At each position, show the element-wise product (animation or highlight)\n5. Show the integral (sum) accumulating in a separate output graph\n6. Animate the output graph building up point-by-point\n7. Label: 'Signal', 'Kernel', 'Convolution Output'",
+      "required_visual_events": [
+        {
+          "id": "evt_003_signal",
+          "description": "1D signal plotted on horizontal axis as bar chart or smooth curve",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_003_kernel",
+          "description": "Kernel/filter displayed as a visually distinct sliding window (different color or highlighted region)",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "after_signal"
+        },
+        {
+          "id": "evt_003_window_move",
+          "description": "Sliding window moves continuously left-to-right through the signal",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "continuous_main_animation"
+        },
+        {
+          "id": "evt_003_product",
+          "description": "Element-wise product highlighted at each window position (color change, overlay, or numeric display)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "synchronized_with_window"
+        },
+        {
+          "id": "evt_003_accumulate",
+          "description": "Integral/sum of products accumulates, shown as a running total or area",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "synchronized_with_window"
+        },
+        {
+          "id": "evt_003_output_graph",
+          "description": "Output convolution graph builds dynamically point-by-point as window slides",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "synchronized_with_window"
+        }
+      ],
+      "coverage_requirements": [
+        "Signal, kernel, and output labeled with text ('Signal', 'Kernel', 'Convolution Output')",
+        "Window visibly distinct from signal (different color, opacity, or border)",
+        "Output graph points added one by one, not all at once",
+        "Color coding or highlighting of product region at each step",
+        "Correspondence between window position and output point made visually clear"
+      ],
+      "success_criteria": {
+        "executability_min": 0.9,
+        "alignment_score_min": 0.8,
+        "coverage_score_min": 0.75,
+        "version_conflict_error_rate_max": 0.03
+      },
+      "common_failure_modes": [
+        "Window doesn't move (static visualization) [CRITICAL FAILURE — defeats entire purpose]",
+        "Kernel not visually distinct from signal (same color/style)",
+        "Output graph appears instantaneously without building point-by-point [CRITICAL DRIFT]",
+        "Product computation not shown or highlighted",
+        "No visual indication of where output point corresponds to input position",
+        "Kernel flipped incorrectly (convolution requires flip, correlation does not)",
+        "Window moves but output is not computed correctly (wrong summation)",
+        "Labels missing — viewer cannot tell which graph is signal vs output"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "InteractiveScene → Scene in CE",
+          "self.camera.frame manipulation → MovingCameraScene in CE",
+          "DieFace → custom implementation needed",
+          "GlowDot → Dot in CE (no built-in glow)",
+          "ParametricSurface constructor → Surface with different API in CE",
+          "SurfaceMesh → no direct CE equivalent",
+          "always_sort_to_camera → not available in CE",
+          "DecimalMatrix → Matrix or MobjectMatrix in CE",
+          "set_backstroke → set_stroke(background=True) in CE",
+          "fix_in_frame() → not available in CE",
+          "get_full_raster_image_path() → not in CE",
+          "time_span parameter on animations → not in CE",
+          "i2gp → axes.input_to_graph_point in CE"
+        ]
+      },
+      "pedagogical_intent": "Convolution is fundamentally about sliding and multiplying. The window movement is the core concept. Animation must make clear that output at position i depends on signal elements around position i. Without the sliding motion, the definition (f * g)(t) = ∫f(τ)g(t−τ)dτ remains opaque.",
+      "raw_code_path": "raw_code/convolutions/",
+      "raw_code_files": [
+        "discrete.py",
+        "supplements.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 3309,
+        "scene_classes": [
+          {
+            "class_name": "DiceExample",
+            "type": "main_scene",
+            "description": "Demonstrates convolution through dice sum probability distribution. 6x6 grid of outcomes, diagonal walks to compute P(sum=n), slides reversed rows.",
+            "key_methods": [
+              "construct",
+              "get_aligned_pairs"
+            ]
+          },
+          {
+            "class_name": "MovingAverageExample",
+            "type": "main_scene",
+            "description": "Visualizes discrete convolution as a moving average by sliding a small kernel across a larger signal, highlighting aligned pairs and building result.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "ImageConvolution",
+            "type": "main_scene",
+            "description": "Base class for image-processing convolution demos. Loads raster image as pixel grid, slides kernel overlay, renders convolved output pixel-by-pixel.",
+            "key_methods": [
+              "setup",
+              "get_pixel_array",
+              "get_kernel",
+              "set_index",
+              "zoom_to_kernel",
+              "show_pixel_sum"
+            ]
+          },
+          {
+            "class_name": "BoxBlurMario",
+            "type": "main_scene",
+            "description": "Applies a 3x3 box blur to a Mario sprite, pausing to zoom into kernel and show weighted sum.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "GaussianBluMario",
+            "type": "main_scene",
+            "description": "Applies 5x5 Gaussian blur to Mario with 3D ParametricSurface visualization of the bell curve kernel.",
+            "key_methods": [
+              "construct",
+              "get_kernel"
+            ]
+          },
+          {
+            "class_name": "SobelFilter1",
+            "type": "main_scene",
+            "description": "Horizontal Sobel edge-detection kernel on grayscale image, coloring by sign.",
+            "key_methods": [
+              "construct",
+              "get_kernel"
+            ]
+          },
+          {
+            "class_name": "BigPolynomials",
+            "type": "main_scene",
+            "description": "Visualizes polynomial multiplication as N×N grid of term products with diagonal groupings showing convolution equivalence.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "FunctionToCoefficientCommutativeDiagram",
+            "type": "main_scene",
+            "description": "Commutative diagram: polynomial functions multiplied directly vs coefficient arrays convolved.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "DataPointsToPolynomial",
+            "type": "main_scene",
+            "description": "Lagrange interpolation: progressively adding data points showing unique polynomial fitting.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "PolynomialSystem",
+            "type": "main_scene",
+            "description": "Linear system for polynomial coefficients, introduces DFT via roots of unity, FFT arrows with O(N log N).",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "RootsOfUnity",
+            "type": "main_scene",
+            "description": "Visualizes Nth roots of unity on complex plane, powers of ω cycling around unit circle.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "AlgorithmOutline",
+            "type": "main_scene",
+            "description": "Full fast convolution algorithm: input→polynomial→FFT→pointwise multiply→inverse FFT→coefficients.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "NormalFunctionPreview",
+            "type": "main_scene",
+            "description": "Previews Gaussian curve in 2D then lifts to 3D as e^(-x²-y²) with ParametricSurface and SurfaceMesh.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Sliding/shifting rows for convolution alignment (flip-and-slide)",
+          "Color-coded dice faces with per-diagonal highlighting",
+          "Pixel-grid image representation using Square grids with RGB fill",
+          "Kernel overlay sliding across pixel grid with ValueTracker-driven updaters",
+          "3D ParametricSurface for Gaussian kernel visualization",
+          "Diagonal grouping in multiplication grids (polynomial multiplication = convolution)",
+          "Commutative diagram with vertical arrows (coefficients ↔ functions)",
+          "Complex plane with roots of unity on unit circle",
+          "Camera frame zooming and reorientation for detail views",
+          "TransformMatchingShapes for morphing between symbolic expressions",
+          "Signed-value color coding for Sobel kernels"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "add_updater (kernel position tracking)",
+            "UpdateFromFunc",
+            "UpdateFromAlphaFunc",
+            "frame.increment_theta"
+          ],
+          "animation_types": [
+            "ShowCreation",
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "FadeTransform",
+            "TransformMatchingShapes",
+            "TransformMatchingTex",
+            "LaggedStartMap",
+            "MoveToTarget",
+            "CountInFrom",
+            "VShowPassingFlash"
+          ],
+          "3d_constructs": [
+            "ParametricSurface",
+            "ThreeDAxes",
+            "SurfaceMesh",
+            "frame.reorient",
+            "ComplexPlane"
+          ],
+          "layout_methods": [
+            "arrange",
+            "get_grid",
+            "next_to",
+            "SurroundingRectangle",
+            "Brace",
+            "Underline"
+          ],
+          "custom_classes": [
+            "InteractiveScene",
+            "TeacherStudentsScene",
+            "DieFace",
+            "GlowDot",
+            "DecimalMatrix",
+            "VideoWrapper"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-004",
+      "title": "Eigenvectors & Eigenvalues | Chapter 14",
+      "youtube_video_id": "PFDu9oVAE-g",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 4,
+      "domain": [
+        "linear-algebra",
+        "transformations"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate how eigenvectors behave under a 2×2 matrix transformation. Show 2D grid deforming, with most vectors rotating while eigenvectors remain collinear (only scaling, not rotating). Color-code eigenvectors distinctly and display eigenvalues λ₁, λ₂.",
+      "full_prompt": "Animate how eigenvectors behave under a 2×2 matrix transformation. Show:\n1. A 2D coordinate grid with basis vectors **e₁** and **e₂** highlighted\n2. A 2×2 matrix A visualized as a transformation (grid deforms)\n3. Most vectors rotate and change length\n4. Special vectors (eigenvectors) only change length (stay on same line)\n5. Color code eigenvectors distinctly (e.g., red for λ₁, blue for λ₂)\n6. Display eigenvalues λ₁ and λ₂ alongside eigenvectors\n7. Show transformation A applied smoothly over 2 seconds\n8. After transformation, highlight that eigenvectors are 'special'",
+      "required_visual_events": [
+        {
+          "id": "evt_004_grid",
+          "description": "2D coordinate grid (NumberPlane) rendered with gridlines visible",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_004_basis",
+          "description": "Basis vectors e₁ and e₂ highlighted with distinct colors",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_004_transform",
+          "description": "Linear transformation A applied smoothly — grid deforms, all vectors transform simultaneously over ~2 seconds",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "main_animation"
+        },
+        {
+          "id": "evt_004_eigenvectors",
+          "description": "Eigenvectors identified and colored distinctly (e.g., red for λ₁, blue for λ₂) before or during transformation",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "before_or_during_transform"
+        },
+        {
+          "id": "evt_004_eigenvalues",
+          "description": "Eigenvalue labels (λ₁ = ..., λ₂ = ...) displayed as numeric values near eigenvectors",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "after_transform"
+        },
+        {
+          "id": "evt_004_collinear",
+          "description": "Eigenvectors visibly remain on the same line (collinear) while other vectors rotate — this is the key visual proof",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "during_transform"
+        }
+      ],
+      "coverage_requirements": [
+        "Matrix A displayed with numeric entries (e.g., [[3,1],[0,2]])",
+        "Eigenvalue numbers shown (not just symbols)",
+        "Eigenvector colors consistent before, during, and after transformation",
+        "Before/after transformation visible or comparable (showing grid deformation)",
+        "At least one non-eigenvector shown rotating for contrast"
+      ],
+      "success_criteria": {
+        "executability_min": 0.85,
+        "alignment_score_min": 0.75,
+        "coverage_score_min": 0.8,
+        "version_conflict_error_rate_max": 0.05
+      },
+      "common_failure_modes": [
+        "Eigenvectors rotate during transformation [CRITICAL LOGIC ERROR — defeats the entire point]",
+        "Eigenvalues not displayed or shown only as symbols without numbers",
+        "Grid deforms but eigenvectors not highlighted or distinguished",
+        "Color coding inconsistent (eigenvector changes color mid-animation)",
+        "Transformation occurs too fast (<0.5s) or too slow (>5s) to observe",
+        "Matrix A not shown — viewer cannot verify which transformation was applied",
+        "Only eigenvectors shown without contrast vectors — specialness not evident",
+        "ApplyMatrix/LinearTransformationScene API used incorrectly"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "LinearTransformationScene API differences (apply_transposed_matrix, i_hat/j_hat)",
+          "TeacherStudentsScene/PiCreature system → not in CE",
+          "ExternallyAnimatedScene → not in CE",
+          "self.camera.frame manipulation → MovingCameraScene in CE",
+          "Matrix.get_mob_matrix() → get_entries() in CE",
+          "set_color_by_gradient, apply_depth_test → GL-specific rendering",
+          "self.embed() → not available in CE"
+        ]
+      },
+      "pedagogical_intent": "Eigenvectors are special because they don't rotate under transformation — they only scale. This visualization should make that property self-evident by showing most vectors rotating while eigenvectors stay put. The contrast between 'most vectors rotate' and 'eigenvectors only scale' is the entire lesson.",
+      "raw_code_path": "raw_code/eigen/",
+      "raw_code_files": [
+        "chapter10.py",
+        "quick_eigen.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 5120,
+        "scene_classes": [
+          {
+            "class_name": "ExampleTranformationScene",
+            "type": "helper",
+            "description": "Reusable LinearTransformationScene base with CONFIG-based transformation matrix and auto-added matrix display.",
+            "key_methods": [
+              "setup",
+              "add_matrix"
+            ]
+          },
+          {
+            "class_name": "IntroduceExampleTransformation",
+            "type": "main_scene",
+            "description": "Applies [[3,0],[1,2]] transformation showing basis vector landing spots and matrix column construction.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "VectorRemainsOnSpan",
+            "type": "main_scene",
+            "description": "Demonstrates a vector remaining on its span (eigenvector) after transformation, with scaling animations.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "SneakierEigenVector",
+            "type": "main_scene",
+            "description": "Shows less obvious eigenvector [-1,1] scaled by eigenvalue 2 during transformation.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "NameEigenvectorsAndEigenvalues",
+            "type": "main_scene",
+            "description": "Names eigenvectors and eigenvalues by labeling two eigenspaces (eigenvalue 3 and 2), showing a non-eigenvector contrast.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "SymbolicEigenvectors",
+            "type": "main_scene",
+            "description": "Core algebraic derivation: introduces Av=λv, rewrites with identity matrix, reveals linear system, brings in determinant condition.",
+            "key_methods": [
+              "construct",
+              "introduce_terms",
+              "bring_in_determinant"
+            ]
+          },
+          {
+            "class_name": "TweakLambda",
+            "type": "main_scene",
+            "description": "Interactive-style scene animating (A-λI) as λ sweeps from 0 to 3, showing determinant changing and grid deforming in real time.",
+            "key_methods": [
+              "construct",
+              "range_lambda"
+            ]
+          },
+          {
+            "class_name": "ChangeToEigenBasis",
+            "type": "main_scene",
+            "description": "Culminating scene showing change of basis to eigenbasis, writing change-of-basis matrix, arriving at diagonal matrix.",
+            "key_methods": [
+              "construct",
+              "write_change_of_basis_matrix"
+            ]
+          },
+          {
+            "class_name": "OutlineThreeFacts",
+            "type": "main_scene",
+            "description": "Outlines trace = sum of eigenvalues, determinant = product of eigenvalues, and the m±√(m²-p) formula.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "MeanProductExample",
+            "type": "main_scene",
+            "description": "Number line animation showing eigenvalues as m±d with ValueTracker, then algebraically derives d=√(m²-p).",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "PauliMatrices",
+            "type": "main_scene",
+            "description": "Introduces Pauli spin matrices σx, σy, σz with 3D axes showing ±1 eigenvalues.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "SpinMeasurements",
+            "type": "main_scene",
+            "description": "ThreeDScene simulating Stern-Gerlach apparatus with 3D prism magnets, screen, and randomized beam paths.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "QuadraticPolynomials",
+            "type": "main_scene",
+            "description": "Graphs characteristic polynomial, marks roots as eigenvalues, connects via Vieta's formulas.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Linear transformation grid animations (NumberPlane warping)",
+          "Eigenvector span-line visualization (colored lines through origin)",
+          "Gradient-colored vector families along eigenspaces",
+          "Real-time lambda sweeping with DecimalNumber and determinant tracking",
+          "Color-coded formula highlighting (MEAN_COLOR, PROD_COLOR, EIGEN_COLORS)",
+          "3D Stern-Gerlach apparatus with prism geometry",
+          "Sphere + SurfaceMesh with rotation updaters for spin visualization",
+          "ValueTracker-driven number line animations",
+          "det_path_anim custom VShowPassingFlash tracing matrix diagonals"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "add_updater (eigenvectors tracking plane)",
+            "always() (label positioning)",
+            "ValueTracker-driven positions",
+            "camera frame rotation"
+          ],
+          "animation_types": [
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "FadeTransform",
+            "TransformMatchingTex",
+            "TransformMatchingShapes",
+            "VShowPassingFlash",
+            "Flash",
+            "FlashAround",
+            "apply_transposed_matrix",
+            "GrowArrow"
+          ],
+          "3d_constructs": [
+            "ThreeDScene",
+            "ThreeDAxes",
+            "Sphere",
+            "SurfaceMesh",
+            "ParametricCurve",
+            "get_prism (custom 3D geometry)"
+          ],
+          "layout_methods": [
+            "arrange",
+            "next_to",
+            "Brace",
+            "SurroundingRectangle",
+            "ScreenRectangle",
+            "NumberLine.n2p",
+            "Axes.c2p"
+          ],
+          "custom_classes": [
+            "ExampleTranformationScene",
+            "LinearTransformationScene",
+            "GeneralExample",
+            "TeacherStudentsScene",
+            "PatreonEndScreen"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-005",
+      "title": "The Determinant | Chapter 6",
+      "youtube_video_id": "Ip3X9LOh2dk",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 2,
+      "domain": [
+        "linear-algebra",
+        "visualization"
+      ],
+      "estimated_complexity": "low",
+      "raw_code_status": "collected",
+      "brief_description": "Animate geometric interpretation of the determinant. Show a unit parallelogram defined by basis vectors, apply a 2×2 matrix transformation, and show the area scaling from 1 to |det(A)|. Label everything with numeric values.",
+      "full_prompt": "Animate the geometric interpretation of the determinant. Show:\n1. A unit parallelogram (defined by basis vectors **u** and **v**)\n2. A 2×2 matrix A applied to the parallelogram\n3. The parallelogram transforms smoothly\n4. Label: 'Original Area = 1'\n5. After transformation, label: 'New Area = |det(A)|'\n6. Show the numerical value of det(A) updating as the transformation occurs\n7. Display the 2×2 matrix values alongside",
+      "required_visual_events": [
+        {
+          "id": "evt_005_original",
+          "description": "Unit parallelogram visualized with 'Area = 1' label, defined by basis vectors u and v",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_005_matrix",
+          "description": "2×2 matrix A displayed with numeric entries",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "before_transform"
+        },
+        {
+          "id": "evt_005_transform",
+          "description": "Parallelogram transforms smoothly under matrix A — grid deforms simultaneously",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "main_animation"
+        },
+        {
+          "id": "evt_005_new_area",
+          "description": "New area labeled: 'New Area = |det(A)| = [numeric value]'",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "after_transform"
+        },
+        {
+          "id": "evt_005_det_value",
+          "description": "Determinant value displayed numerically and updates during transformation (interpolates from 1 to det(A))",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "during_and_after_transform"
+        }
+      ],
+      "coverage_requirements": [
+        "Original area labeled as 1",
+        "New area computed and labeled with numeric value",
+        "Matrix displayed with numeric entries",
+        "Determinant value numeric and visible",
+        "Parallelogram filled or shaded to make area visually apparent"
+      ],
+      "success_criteria": {
+        "executability_min": 0.95,
+        "alignment_score_min": 0.85,
+        "coverage_score_min": 0.9,
+        "version_conflict_error_rate_max": 0.02
+      },
+      "common_failure_modes": [
+        "Transformation occurs but area not labeled (missing pedagogical annotation)",
+        "Determinant value not displayed or only symbolic (no numeric value)",
+        "Matrix not shown — viewer cannot verify det computation",
+        "Transformation disconnected from area change (area label doesn't update)",
+        "Parallelogram not filled/shaded — area change not visually apparent",
+        "Negative determinant case not handled (orientation flip not shown)"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "Circle.__init__(self, **kwargs) old-style super → super().__init__() in CE",
+          "VMobject(*mobjects) grouping → VGroup in CE",
+          ".split() on mobjects → indexing or .submobjects in CE",
+          "SVGMobject('RightHandOutline') bare filename → full path in CE",
+          "ShowCreation → Create in CE",
+          "add_transformable_mobject/add_moving_mobject → different LinearTransformationScene API in CE",
+          "get_det_text() → custom helper, not standard CE"
+        ]
+      },
+      "pedagogical_intent": "Determinant measures how much a linear transformation scales area. This must be crystal clear: original area 1 → new area |det(A)|. This is a Level 2 problem — straightforward to implement, good for baseline testing.",
+      "raw_code_path": "raw_code/determinant/",
+      "raw_code_files": [
+        "chapter5.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 1132,
+        "scene_classes": [
+          {
+            "class_name": "Blob",
+            "type": "helper",
+            "description": "Custom circle subclass applying random complex deformation to create organic blob shape with hit-test method.",
+            "key_methods": [
+              "__init__",
+              "probably_contains"
+            ]
+          },
+          {
+            "class_name": "NameDeterminant",
+            "type": "main_scene",
+            "description": "Core scene: names the determinant, shows matrix with det() text, animates unit square scaling.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "WhatHappensToOneSquareHappensToAll",
+            "type": "main_scene",
+            "description": "Shows multiple squares of different sizes all transforming uniformly to illustrate linearity of area scaling.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "BreakBlobIntoGridSquares",
+            "type": "main_scene",
+            "description": "Approximates a Blob's area with grid squares, then transforms to show each square scales by determinant.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "FlipSpaceOver",
+            "type": "main_scene",
+            "description": "Animates flipping a NumberPlane using 3D Rotate to motivate orientation and negative determinants.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "IHatJHatOrientation",
+            "type": "main_scene",
+            "description": "Shows ĵ is to the left of î before transformation and to the right after, demonstrating orientation reversal.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "TwoDDeterminantFormula",
+            "type": "main_scene",
+            "description": "Derives det = ad−bc for a 2×2 matrix, animating zeroing out off-diagonal entries.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "FullFormulaExplanation",
+            "type": "main_scene",
+            "description": "Complete geometric proof of ad−bc via surrounding rectangle minus triangles and parallelograms.",
+            "key_methods": [
+              "construct",
+              "add_polygons",
+              "show_formula"
+            ]
+          },
+          {
+            "class_name": "ThreeDDetFormula",
+            "type": "main_scene",
+            "description": "Shows cofactor expansion of 3×3 determinant.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "ProductProperty",
+            "type": "main_scene",
+            "description": "States det(M1·M2) = det(M1)·det(M2).",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "RightHandRule",
+            "type": "main_scene",
+            "description": "SVG right hand with î, ĵ, k̂ vectors explaining 3D orientation.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Unit square tracking through transformations to visualize area scaling",
+          "Grid-square approximation of irregular blobs at increasing granularity",
+          "Two-step matrix application (scale x then y) for diagonal matrices",
+          "NumberPlane flip animation (front/back) for orientation reversal",
+          "Surrounding-rectangle geometric proof with colored sub-regions",
+          "SVG hand import for right-hand rule demonstration",
+          "FunctionGraph of cos(t) synchronized with slow rotation"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [],
+          "animation_types": [
+            "FadeIn",
+            "FadeOut",
+            "Write",
+            "ShowCreation",
+            "Transform",
+            "ApplyMethod",
+            "GrowFromCenter",
+            "Rotate"
+          ],
+          "3d_constructs": [
+            "Rotate with path_arc for plane-flip",
+            "RightHandRule vectors simulating 3D"
+          ],
+          "layout_methods": [
+            "arrange",
+            "next_to",
+            "to_edge",
+            "Brace",
+            "SurroundingRectangle"
+          ],
+          "custom_classes": [
+            "Blob",
+            "RightHand (SVGMobject)",
+            "LinearTransformationScene",
+            "TeacherStudentsScene"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-006",
+      "title": "But What Is the Central Limit Theorem?",
+      "youtube_video_id": "zeJD6dqJ5lo",
+      "category": [
+        "direct-visualization",
+        "drift-sensitive"
+      ],
+      "difficulty_level": 3,
+      "domain": [
+        "probability",
+        "statistics"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate Central Limit Theorem by showing distribution morphing. Start with a non-normal distribution (e.g., uniform or bimodal), repeatedly sample means, build histogram of means that gradually converges to a bell curve. Key: gradual morphing process, not instant appearance.",
+      "full_prompt": "Animate the Central Limit Theorem by showing how the distribution of sample means approaches a normal distribution. Show:\n1. Histogram of samples from an arbitrary distribution (e.g., uniform or bimodal)\n2. Repeatedly draw random samples, compute their mean, and add to a separate histogram\n3. Animate the second histogram morphing from random/flat to a bell curve (normal distribution)\n4. Overlay or label the resulting normal distribution\n5. Show text: 'Distribution of sample means → Normal distribution'",
+      "required_visual_events": [
+        {
+          "id": "evt_006_original_dist",
+          "description": "Original (non-normal) distribution histogram visualized — should be clearly NOT a bell curve",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_006_sampling",
+          "description": "Samples being drawn from original distribution with visual indication (highlighting, arrows, or dots moving)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "repeated_throughout"
+        },
+        {
+          "id": "evt_006_means",
+          "description": "Sample means computed and added to second histogram one at a time",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "after_each_sample"
+        },
+        {
+          "id": "evt_006_histogram_build",
+          "description": "Histogram of sample means builds progressively bar by bar or batch by batch",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "continuous_main_animation"
+        },
+        {
+          "id": "evt_006_convergence",
+          "description": "Histogram visibly converges toward a bell-curve shape through the progressive building process",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "gradual_throughout"
+        },
+        {
+          "id": "evt_006_normal_curve",
+          "description": "Normal distribution curve overlaid on the histogram of means for comparison",
+          "weight": 0.7,
+          "is_critical": false,
+          "timing": "scene_end"
+        }
+      ],
+      "coverage_requirements": [
+        "Original distribution labeled (e.g., 'Uniform Distribution' or 'Bimodal Distribution')",
+        "Sampling process visually indicated (not just stated in text)",
+        "Normal distribution labeled or overlaid as curve",
+        "Text explanation of CLT present ('Distribution of sample means → Normal')",
+        "Sample size n labeled or indicated"
+      ],
+      "success_criteria": {
+        "executability_min": 0.85,
+        "alignment_score_min": 0.75,
+        "coverage_score_min": 0.7,
+        "version_conflict_error_rate_max": 0.05
+      },
+      "common_failure_modes": [
+        "Histogram appears fully formed as normal without morphing [CRITICAL DRIFT — misses the convergence process]",
+        "No indication of sampling process (means just appear)",
+        "Original distribution not shown or compared (no baseline reference)",
+        "Histogram doesn't build progressively (all bars appear at once)",
+        "Normal curve doesn't appear for comparison",
+        "Original distribution is already normal (defeats the purpose of CLT demo)",
+        "Random number generation produces non-reproducible results across renders",
+        "BarChart/Histogram API issues in CE (constructor differences)"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "InteractiveScene → Scene in CE",
+          "self.frame → self.camera.frame in CE",
+          "axes.bind_graph_to_func() → always_redraw in CE",
+          "TrueDot.make_3d() → Dot3D in CE",
+          "set_shading(ambient, diffuse, specular) → not in CE Cairo renderer",
+          "make_number_changeable() → DecimalNumber with updaters in CE",
+          "FillArrow → Arrow in CE",
+          "GlowDot → Dot in CE (no glow effect)",
+          "DieFace → custom implementation needed",
+          "self.add_sound() → different path resolution in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that regardless of the original distribution's shape, the distribution of sample means converges to normal. The gradual morphing is essential — it shows the convergence PROCESS, not just the end state. Showing the original non-normal distribution as contrast is critical.",
+      "raw_code_path": "raw_code/clt/",
+      "raw_code_files": [
+        "main.py",
+        "wordy_scenes.py",
+        "galton_board.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 7036,
+        "scene_classes": [
+          {
+            "class_name": "ChartBars",
+            "type": "helper",
+            "description": "Custom VGroup subclass for rendering bar charts on axes with adjustable widths and colors.",
+            "key_methods": [
+              "__init__",
+              "set_values"
+            ]
+          },
+          {
+            "class_name": "DiceSumDistributions",
+            "type": "main_scene",
+            "description": "Core scene showing sum distributions of dice rolls for n=1..7 with mean/SD annotations and Gaussian overlay.",
+            "key_methods": [
+              "construct",
+              "get_sum_distribution_plot",
+              "get_mean_labels",
+              "get_sd_labels"
+            ]
+          },
+          {
+            "class_name": "BuildUpGaussian",
+            "type": "main_scene",
+            "description": "Builds Gaussian step-by-step from e^x to full parameterized normal distribution with sigma/mu controls.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "LimitingDistributions",
+            "type": "main_scene",
+            "description": "Shows convergence of sum distributions to normal curve as N increases, with rescaling and CLT statement.",
+            "key_methods": [
+              "construct",
+              "get_scaled_sum_plot",
+              "get_normal_plot_axes"
+            ]
+          },
+          {
+            "class_name": "MeanAndStandardDeviation",
+            "type": "main_scene",
+            "description": "Interactive exploration of mean and standard deviation with die distributions and variance squares.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "RuleOfThumb",
+            "type": "main_scene",
+            "description": "Illustrates the 68-95-99.7 rule for standard normal distribution with shaded regions.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "AnalyzeHundreDiceQuestion",
+            "type": "main_scene",
+            "description": "Full worked example: 100 dice rolls, computing sum mean/SD, 95% confidence, sample mean distribution.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "GaltonBoard",
+            "type": "main_scene",
+            "description": "Full Galton board simulation with ball bouncing, ±1 arrows, Pascal's triangle probabilities, bucket counting.",
+            "key_methods": [
+              "construct",
+              "get_pegs",
+              "get_buckets",
+              "random_trajectory",
+              "drop_n_balls"
+            ]
+          },
+          {
+            "class_name": "BiggerGaltonBoard",
+            "type": "main_scene",
+            "description": "Large 13-row Galton board with 800 balls and bell curve overlay.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "DefineMGF",
+            "type": "main_scene",
+            "description": "Defines Moment Generating Function M_X(t) = E[e^{tX}] with Taylor series expansion.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "DefineCGF",
+            "type": "main_scene",
+            "description": "Defines Cumulant Generating Function K_X(t) = log(M_X(t)) and additive property.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "CumulantsOfScaledSum",
+            "type": "main_scene",
+            "description": "Derives m-th cumulant of scaled sum using K_m[cX] = c^m K_m[X], showing higher cumulants vanish.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Bar chart animations with ChartBars custom class",
+          "Galton board physics simulation with parabolic bounce trajectories",
+          "Interactive value trackers with slider displays for mu and sigma",
+          "Distribution rescaling animations (stretch about mean)",
+          "Bell curve overlays on bar charts",
+          "Pascal's triangle probability labels on Galton board pegs",
+          "Partial area shading under curves (68-95-99.7 rule)",
+          "Sound effects for ball clinks",
+          "3D sphere balls with shading in Galton board"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "add_updater",
+            "always_redraw",
+            "UpdateFromFunc",
+            "UpdateFromAlphaFunc",
+            "axes.bind_graph_to_func"
+          ],
+          "animation_types": [
+            "Transform",
+            "TransformMatchingTex",
+            "FadeTransform",
+            "FadeTransformPieces",
+            "LaggedStart",
+            "ShowIncreasingSubsets",
+            "FlashAround",
+            "VShowPassingFlash",
+            "CountInFrom",
+            "ChangeDecimalToValue"
+          ],
+          "3d_constructs": [
+            "Sphere (Galton board balls)",
+            "TrueDot with make_3d()",
+            "set_shading"
+          ],
+          "layout_methods": [
+            "arrange",
+            "arrange_in_grid",
+            "next_to",
+            "SurroundingRectangle",
+            "Brace",
+            "NumberPlane",
+            "Axes"
+          ],
+          "custom_classes": [
+            "ChartBars",
+            "DieFace",
+            "InteractiveScene",
+            "TeacherStudentsScene",
+            "GlowDot",
+            "FillArrow"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-007",
+      "title": "The Medical Test Paradox",
+      "youtube_video_id": "lG4VkPoG3ko",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 2,
+      "domain": [
+        "probability",
+        "bayes-theorem"
+      ],
+      "estimated_complexity": "low",
+      "raw_code_status": "collected",
+      "brief_description": "Animate Bayes' theorem using the 'Bayes box' (2×2 contingency table) visualization. Show four quadrants populated with counts from a hypothetical 1000-person population, animate highlighting, and compute P(sick | positive). Reveal the paradox: 95% accurate test → surprisingly low P(sick | +).",
+      "full_prompt": "Animate Bayes' theorem using the 'Bayes box' visualization. Show:\n1. A rectangle divided into four quadrants representing:\n   - P(sick ∩ +)  (top-left)\n   - P(not-sick ∩ +)  (top-right)\n   - P(sick ∩ −)  (bottom-left)\n   - P(not-sick ∩ −)  (bottom-right)\n2. Initially, populate with hypothetical counts (e.g., 1 sick person in 1000)\n3. Animate the division showing how many test + among the 1000\n4. Highlight the sick population who tested + (top-left)\n5. Show final calculation: P(sick | +) = (top-left) / (top-left + top-right)\n6. Display final probability and explain the paradox (test is 95% accurate, but low disease prevalence → high false positive rate)",
+      "required_visual_events": [
+        {
+          "id": "evt_007_rectangle",
+          "description": "Rectangle divided into four quadrants (2×2 grid) with clear borders",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_007_labels",
+          "description": "All four populations labeled: sick+positive, sick+negative, healthy+positive, healthy+negative with counts",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "after_rectangle"
+        },
+        {
+          "id": "evt_007_animation",
+          "description": "Populations animated — quadrant areas fill, dots appear, or bars grow to represent counts",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "main_animation"
+        },
+        {
+          "id": "evt_007_calculation",
+          "description": "Step-by-step Bayes calculation: P(sick | +) = P(sick ∩ +) / P(+) shown with numeric substitution",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "after_highlighting"
+        },
+        {
+          "id": "evt_007_final_prob",
+          "description": "Final probability computed and displayed as a surprising number (e.g., ~1.9% despite 95% test accuracy)",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_end"
+        }
+      ],
+      "coverage_requirements": [
+        "All four quadrants labeled with text and numeric counts",
+        "Numeric counts or percentages shown (e.g., 1 sick in 1000)",
+        "Formula displayed: P(sick | +) = ... with numeric substitution",
+        "Final probability number visible and highlighted as counterintuitive",
+        "Test accuracy (e.g., 95%) stated explicitly"
+      ],
+      "success_criteria": {
+        "executability_min": 0.95,
+        "alignment_score_min": 0.8,
+        "coverage_score_min": 0.85,
+        "version_conflict_error_rate_max": 0.02
+      },
+      "common_failure_modes": [
+        "Populations don't update or animate (static image, no progression)",
+        "Final calculation not shown (formula omitted)",
+        "Formula missing or only symbolic (no numeric values substituted)",
+        "Paradox not explained — viewer doesn't understand why result is surprising",
+        "Quadrants not clearly delineated (borders missing or too faint)",
+        "Counts are mathematically incorrect (don't add up to population)",
+        "Highlighting doesn't focus on the relevant numerator/denominator regions"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "ApplyMethod(obj.method, arg) → obj.animate.method(arg) in CE",
+          "self.embed() → not available in CE",
+          "set_gloss() → GL shader-based, not in CE",
+          "self.camera.frame → different API in CE",
+          "SVGMobject bare name strings → full file paths in CE",
+          "PiCreature ecosystem → not in CE",
+          "FullScreenFadeRectangle → FullScreenRectangle or manual in CE",
+          "refresh_triangulation() → not needed in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that a 95% accurate test combined with low disease prevalence (1 in 1000) leads to mostly false positives. The box visualization makes this intuition clear by showing the relative sizes of populations. This is a Level 2 problem — straightforward layout, good for baseline.",
+      "raw_code_path": "raw_code/med_test/",
+      "raw_code_files": [
+        "med_test.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 7044,
+        "scene_classes": [
+          {
+            "class_name": "WomanIcon",
+            "type": "helper",
+            "description": "SVGMobject subclass for a woman icon used in population visualizations.",
+            "key_methods": [
+              "__init__"
+            ]
+          },
+          {
+            "class_name": "PersonIcon",
+            "type": "helper",
+            "description": "SVGMobject subclass for a generic person icon.",
+            "key_methods": [
+              "__init__"
+            ]
+          },
+          {
+            "class_name": "Population",
+            "type": "helper",
+            "description": "VGroup arranging a grid of PersonIcon copies to represent a sample population.",
+            "key_methods": [
+              "__init__"
+            ]
+          },
+          {
+            "class_name": "SamplePopulationBreastCancer",
+            "type": "main_scene",
+            "description": "1000-woman sample: splits cancer/no-cancer, shows true/false positives/negatives, computes PPV ≈ 1/11, teaches sensitivity/specificity.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "GigerenzerSession",
+            "type": "main_scene",
+            "description": "Recreates Gigerenzer's seminar: presents prevalence/sensitivity/specificity to gynecologists, reveals most answer incorrectly.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "SamplePopulation10PercentPrevalence",
+            "type": "main_scene",
+            "description": "Sample population method with 10% prevalence: 100 patients, computes 9/(9+8) ≈ 53%.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "BayesFactor",
+            "type": "main_scene",
+            "description": "Core scene teaching sensitivity/FPR fraction as Bayes factor = 10, naming likelihood ratio.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "ProbabilityVsOdds",
+            "type": "main_scene",
+            "description": "Side-by-side probability vs odds notation with animated tickers.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "NewSnazzyBayesRuleSteps",
+            "type": "main_scene",
+            "description": "Three-step Bayes rule: express prior as odds, compute Bayes factor, multiply.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "NewContrastThreeContexts",
+            "type": "main_scene",
+            "description": "Three-screen comparison at 0.1%, 1%, 10% prevalence yielding different posteriors.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "BayesTheorem",
+            "type": "main_scene",
+            "description": "Traditional Bayes' rule: population rectangle diagram with TP/FN/FP/TN areas.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "ContrastTwoFormulas",
+            "type": "main_scene",
+            "description": "Probability-form vs odds-form Bayes' rule side-by-side, multi-evidence extension.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "WhyTheBayesFactorTrickWorks",
+            "type": "main_scene",
+            "description": "Proves why Bayes factor method works via population split and filtration.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Population icon grids with color-coding for disease status",
+          "Color-coded +/- signs and SurroundingRectangles for test results",
+          "Clipboard SVG mobjects with formatted results",
+          "Animated scanning lines over population to simulate testing",
+          "Progressive reveal with ShowIncreasingSubsets for populations",
+          "Side-by-side split screen layouts with vertical dividers",
+          "Color-coded rectangle diagrams for TP/FN/FP/TN proportional areas",
+          "Animated tickers comparing probability vs odds ranges",
+          "Arrow-connected step sequences for the 3-step Bayes method"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "add_updater (brace following, ticker tracking ValueTracker)",
+            "UpdateFromAlphaFunc"
+          ],
+          "animation_types": [
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "ShowCreation",
+            "ShowIncreasingSubsets",
+            "ChangeDecimalToValue",
+            "CountInFrom",
+            "TransformFromCopy",
+            "LaggedStartMap",
+            "DrawBorderThenFill",
+            "PiCreatureSays"
+          ],
+          "3d_constructs": [],
+          "layout_methods": [
+            "arrange_in_grid",
+            "arrange",
+            "next_to",
+            "Brace",
+            "Underline",
+            "SurroundingRectangle",
+            "ScreenRectangle"
+          ],
+          "custom_classes": [
+            "WomanIcon",
+            "PersonIcon",
+            "Population",
+            "TeacherStudentsScene",
+            "Checkmark",
+            "Exmark",
+            "ValueTracker",
+            "Integer"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-008",
+      "title": "Visualizing the Chain Rule",
+      "youtube_video_id": "YG15m2VwSjA",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 3,
+      "domain": [
+        "calculus",
+        "function-composition"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate chain rule via function composition. Show g(x) and f(u) as two separate plots, with an infinitesimal change dx propagating through g to produce du, then through f to produce dy. The causal chain dx → du → dy must be animated in correct order. Display composition formula.",
+      "full_prompt": "Animate the chain rule using function composition. Show:\n1. Two functions: g(x) and f(u), where y = f(g(x))\n2. Visualize g: x → u mapping (e.g., parabola)\n3. Visualize f: u → y mapping (e.g., exponential or sine)\n4. Show how a small change dx in x produces:\n   - A small change du in u (via g')\n   - A small change dy in u (via f')\n   - Overall: dy = f'(u) · g'(x) · dx\n5. Animate the propagation of the infinitesimal change through both functions\n6. Display the composition of derivatives: d/dx[f(g(x))] = f'(g(x)) · g'(x)",
+      "required_visual_events": [
+        {
+          "id": "evt_008_g_plot",
+          "description": "Function g(x) plotted on its own axes with label",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_008_f_plot",
+          "description": "Function f(u) plotted on separate axes with label",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_008_labels",
+          "description": "Variables labeled: input x, intermediate u = g(x), output y = f(u)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_008_dx",
+          "description": "Small change dx shown visually on g's plot (small bracket or highlighted segment)",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "before_propagation"
+        },
+        {
+          "id": "evt_008_propagate_g",
+          "description": "dx propagates through g to produce du = g'(x)·dx — shown as amplified/reduced segment on u-axis",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "first_propagation_step"
+        },
+        {
+          "id": "evt_008_propagate_f",
+          "description": "du propagates through f to produce dy = f'(u)·du — shown as final output change",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "second_propagation_step"
+        },
+        {
+          "id": "evt_008_formula",
+          "description": "Chain rule formula displayed: d/dx[f(g(x))] = f'(g(x)) · g'(x)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "after_propagation"
+        }
+      ],
+      "coverage_requirements": [
+        "Both function graphs labeled with function names",
+        "Infinitesimal changes indicated visually (dx, du, dy) with brackets or segments",
+        "Arrows or animations showing causal propagation direction (x → u → y)",
+        "Derivative symbols shown (f', g', or d/dx notation)",
+        "Connection between graphs made explicit (output of g feeds into f)"
+      ],
+      "success_criteria": {
+        "executability_min": 0.85,
+        "alignment_score_min": 0.75,
+        "coverage_score_min": 0.75,
+        "version_conflict_error_rate_max": 0.05
+      },
+      "common_failure_modes": [
+        "Changes propagate in wrong order (f then g instead of g then f) [CRITICAL LOGIC ERROR]",
+        "Formula not displayed or shown only symbolically without connection to animation",
+        "Only one function shown (the composition is invisible)",
+        "Infinitesimal changes not visually indicated (just text, no visual segments)",
+        "Propagation speeds mismatched (du appears before dx is fully shown)",
+        "Connection between g's output and f's input not animated",
+        "dx, du, dy all shown simultaneously instead of sequentially"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "GraphScene → Axes object methods in CE",
+          "ReconfigurableScene.transition_to_alt_config() → no CE equivalent",
+          "TeacherStudentsScene/PiCreatureScene → not in CE",
+          "NumberLine number_to_point/point_to_number → different API in CE",
+          "ApplyMethod(mob.method, arg) → mob.animate.method(arg) in CE",
+          "ParametricCurve constructor → ParametricFunction in CE",
+          "expression_parts on Tex → get_parts_by_tex() in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that derivatives compose: the overall slope is the product of individual slopes. The animation must show the causal chain dx → du → dy in correct order (g first, then f), making the multiplication of derivatives intuitive. Showing the wrong order is a critical logic error.",
+      "raw_code_path": "raw_code/chain_rule/",
+      "raw_code_files": [
+        "chapter4.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 2287,
+        "scene_classes": [
+          {
+            "class_name": "SumRule",
+            "type": "main_scene",
+            "description": "Full graphical demonstration of sum rule: graphs sin(x), x², and their sum; stacks vertical lines; shows df/dx.",
+            "key_methods": [
+              "construct",
+              "add_graphs",
+              "show_df",
+              "expand_derivative"
+            ]
+          },
+          {
+            "class_name": "IntroduceProductAsArea",
+            "type": "main_scene",
+            "description": "Core product rule visualization: sin(x)·x² as rectangle area, x-slider, df boxes (bottom, corner, right), dx→0 transition.",
+            "key_methods": [
+              "construct",
+              "introduce_box",
+              "nudge_x",
+              "get_df_boxes",
+              "describe_bottom_box",
+              "describe_right_box",
+              "ignore_corner"
+            ]
+          },
+          {
+            "class_name": "ThreeLinesChainRule",
+            "type": "main_scene",
+            "description": "Core chain rule: three synchronized number lines for x, x², sin(x²), showing how nudges propagate through composed functions.",
+            "key_methods": [
+              "construct",
+              "introduce_line_group",
+              "nudge_x",
+              "wiggle_by_dx",
+              "replace_x_squared_with_h"
+            ]
+          },
+          {
+            "class_name": "GeneralizeChainRule",
+            "type": "main_scene",
+            "description": "Generalizes chain rule from sin(x²) to g(h(x)), shows dg/dh · dh/dx, 'cancellation' of dh.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Area-model rectangle for product rule (width × height = f·g)",
+          "Differential df boxes: bottom, corner, right strips",
+          "Three synchronized number lines for chain rule propagation",
+          "Vertical line stacking for sum of functions",
+          "Slider widget with triangle handle for x control",
+          "Parametric curve for dampened spring oscillation",
+          "dx → 0 limit via ReconfigurableScene.transition_to_alt_config"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "UpdateFromAlphaFunc",
+            "UpdateFromFunc",
+            "MaintainPositionRelativeTo"
+          ],
+          "animation_types": [
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "ShowCreation",
+            "Transform",
+            "ReplacementTransform",
+            "DrawBorderThenFill",
+            "FocusOn",
+            "Indicate"
+          ],
+          "3d_constructs": [],
+          "layout_methods": [
+            "arrange",
+            "next_to",
+            "to_edge",
+            "Brace",
+            "get_graph_label",
+            "number_to_point"
+          ],
+          "custom_classes": [
+            "GraphScene",
+            "ReconfigurableScene",
+            "TeacherStudentsScene",
+            "PiCreatureScene",
+            "VideoSeries",
+            "NumberLine"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-009",
+      "title": "Integration and the Fundamental Theorem of Calculus",
+      "youtube_video_id": "rfG8ce4nNh0",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 3,
+      "domain": [
+        "calculus",
+        "integration"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate FTC: show f(x) and f'(x) on separate axes, sweep a vertical line left-to-right accumulating area under f'(x), and show this accumulated area matches f(x). The sweep animation is the critical element — area must build progressively, not appear instantly.",
+      "full_prompt": "Animate the Fundamental Theorem of Calculus, showing the relationship between differentiation and integration. Show:\n1. A function f(x) plotted (e.g., parabola)\n2. The derivative f'(x) shown below\n3. Animate the area under f'(x) from 0 to x accumulating\n4. Show a vertical line moving from left to right, sweeping the area\n5. Display a graph of the accumulated area (which equals f(x))\n6. Demonstrate: ∫₀ˣ f'(t) dt = f(x) − f(0)\n7. Animate several values of x and show the correspondence",
+      "required_visual_events": [
+        {
+          "id": "evt_009_f_plot",
+          "description": "Function f(x) plotted on upper axes with label",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_009_f_prime",
+          "description": "Derivative f'(x) plotted on lower axes with label, visually distinguished from f",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_009_sweep",
+          "description": "Vertical sweep line moves left-to-right through f'(x) plot, progressively shading the area underneath",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "main_animation"
+        },
+        {
+          "id": "evt_009_accumulated_area",
+          "description": "Accumulated area under f'(x) displayed dynamically — shaded region grows as sweep line advances, and/or numeric value updates",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "synchronized_with_sweep"
+        },
+        {
+          "id": "evt_009_formula",
+          "description": "FTC formula displayed: ∫₀ˣ f'(t) dt = f(x) − f(0)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "after_sweep_demo"
+        }
+      ],
+      "coverage_requirements": [
+        "Both f and f' labeled clearly with function names",
+        "Sweep line visibly distinct (different color or dashed)",
+        "Area accumulation indicator: growing shaded region AND/OR numeric counter",
+        "Formula with integral symbol (∫) displayed",
+        "Correspondence between accumulated area and f(x) value made explicit"
+      ],
+      "success_criteria": {
+        "executability_min": 0.9,
+        "alignment_score_min": 0.8,
+        "coverage_score_min": 0.8,
+        "version_conflict_error_rate_max": 0.03
+      },
+      "common_failure_modes": [
+        "Area appears instantaneously without sweep [CRITICAL DRIFT — misses the accumulation concept]",
+        "Accumulated area not synchronized with f(x) plot (correspondence broken)",
+        "Formula not displayed or only shown without numeric verification",
+        "Sweep line not visible or moves too fast to follow",
+        "f and f' not clearly distinguished (same color, no labels)",
+        "Area under f'(x) shaded incorrectly (wrong function or wrong bounds)",
+        "Riemann sum rectangles shown but never transition to continuous area"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "Car/MoveCar/Speedometer → custom implementation needed",
+          "GraphScene → Axes in CE",
+          "ReconfigurableScene.transition_to_alt_config() → not in CE",
+          "PiCreatureScene/TeacherStudentsScene → not in CE",
+          "ThreeDMobject → Surface in CE",
+          "is_subpath attribute → not in CE",
+          "pointwise_become_partial → different API in CE",
+          "Imports from _2017.eoc.chapter1/chapter2 → GL project structure"
+        ]
+      },
+      "pedagogical_intent": "Show that integration undoes differentiation. The sweep animation makes clear that area accumulation (integration) produces the original function. The progressive sweep is the fundamental insight — it must NOT appear all at once.",
+      "raw_code_path": "raw_code/ftc/",
+      "raw_code_files": [
+        "chapter8.py",
+        "chapter9.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 4943,
+        "scene_classes": [
+          {
+            "class_name": "ConstantVelocityPlot",
+            "type": "main_scene",
+            "description": "Constant velocity plot showing area = distance, with units-of-area squares and thought bubble.",
+            "key_methods": [
+              "construct",
+              "draw_graph",
+              "show_product",
+              "note_units"
+            ]
+          },
+          {
+            "class_name": "PiecewiseConstantPlot",
+            "type": "main_scene",
+            "description": "Core scene: piecewise constant approximation of v(t), Riemann sums, integral symbol introduction, sum→integral.",
+            "key_methods": [
+              "construct",
+              "show_piecewise_constant_graph",
+              "write_integral_symbol",
+              "label_integral"
+            ]
+          },
+          {
+            "class_name": "AreaIsDerivative",
+            "type": "main_scene",
+            "description": "Core FTC scene: variable-bound area s(T)=∫v(t)dt, nudging T by dT to show ds=v(T)dT → ds/dT=v(T).",
+            "key_methods": [
+              "construct",
+              "introduce_variable_area",
+              "nudge_input",
+              "show_rectangle_approximation"
+            ]
+          },
+          {
+            "class_name": "FindAntiderivative",
+            "type": "main_scene",
+            "description": "Step-by-step discovery of antiderivative 4t²−⅓t³ for v(t)=t(8−t), with +C constant.",
+            "key_methods": [
+              "construct",
+              "first_part",
+              "second_part",
+              "add_plus_C"
+            ]
+          },
+          {
+            "class_name": "LowerBound",
+            "type": "main_scene",
+            "description": "Explores lower bound, antiderivative difference F(T)−F(0), alternate bounds, +C cancellation.",
+            "key_methods": [
+              "construct",
+              "write_antiderivative_difference"
+            ]
+          },
+          {
+            "class_name": "FundamentalTheorem",
+            "type": "main_scene",
+            "description": "States and visualizes FTC: ∫f(x)dx = F(b)−F(a).",
+            "key_methods": [
+              "construct",
+              "write_fundamental_theorem_of_calculus"
+            ]
+          },
+          {
+            "class_name": "NegativeArea",
+            "type": "main_scene",
+            "description": "Explains negative/signed area under velocity curve, car going backwards.",
+            "key_methods": [
+              "construct",
+              "show_negative_point",
+              "write_signed_area"
+            ]
+          },
+          {
+            "class_name": "IntegralOfSine",
+            "type": "main_scene",
+            "description": "Connects average to integral of sin(x), Riemann rects, dx→0, distributes dx, area/width = average height.",
+            "key_methods": [
+              "construct",
+              "write_integral",
+              "let_dx_approach_zero",
+              "write_area_over_width"
+            ]
+          },
+          {
+            "class_name": "Antiderivative",
+            "type": "main_scene",
+            "description": "Full antiderivative walkthrough: −cos(x), FTC application, area=2, average=2/π, slope of secant.",
+            "key_methods": [
+              "construct",
+              "negate_derivative_of_cosine",
+              "apply_ftoc",
+              "divide_by_pi"
+            ]
+          },
+          {
+            "class_name": "GeneralAverage",
+            "type": "main_scene",
+            "description": "General average value ∫f(x)dx/(b−a) with signed area and finite sampling.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "GeneralAntiderivative",
+            "type": "main_scene",
+            "description": "F(b)−F(a)/(b−a) as average = slope of secant line on F.",
+            "key_methods": [
+              "construct",
+              "show_average_in_terms_of_F",
+              "draw_slope"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Riemann rectangle approximation sequences converging to area",
+          "Secant-line-to-tangent-line slope animation",
+          "Variable-bound area that dynamically changes via UpdateFromAlphaFunc",
+          "Piecewise-constant step-function overlay on smooth curve",
+          "Car/speedometer physical analogy with MoveCar animation",
+          "Brace-labeled dimensions on rectangles (height=v(t), width=dt)",
+          "Dot-by-dot velocity plotting from speedometer needle",
+          "Signed area visualization with +/− labels",
+          "Antiderivative graph vertical shifting to show +C invariance"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "UpdateFromAlphaFunc",
+            "MaintainPositionRelativeTo",
+            "animate_secant_slope_group_change"
+          ],
+          "animation_types": [
+            "ShowCreation",
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "Transform",
+            "ReplacementTransform",
+            "MoveCar",
+            "Indicate",
+            "Succession",
+            "transform_between_riemann_rects"
+          ],
+          "3d_constructs": [
+            "ThreeDCamera (solar panel)",
+            "ThreeDMobject",
+            "Rotate with 3D axis"
+          ],
+          "layout_methods": [
+            "Brace",
+            "Arrow",
+            "VGroup.arrange",
+            "DashedLine",
+            "BackgroundRectangle",
+            "VideoSeries"
+          ],
+          "custom_classes": [
+            "Car",
+            "MoveCar",
+            "Speedometer",
+            "ReconfigurableScene",
+            "GraphScene",
+            "TeacherStudentsScene",
+            "OpeningQuote"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-010",
+      "title": "Taylor Series",
+      "youtube_video_id": "3d6DsjIBzJ4",
+      "category": [
+        "direct-visualization"
+      ],
+      "difficulty_level": 4,
+      "domain": [
+        "calculus",
+        "series"
+      ],
+      "estimated_complexity": "medium-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate Taylor series expansion of a function (e.g., sin(x), eˣ). Plot the original function in black, then sequentially add color-coded partial sums P₀, P₁, P₂, ... showing the polynomial approximation converging toward the original. Each term must be added one at a time, not all at once.",
+      "full_prompt": "Animate the Taylor series expansion of a function (e.g., sin(x), e^x). Show:\n1. The original function plotted in black\n2. Start with the 0th-order term (constant): P₀(x) = f(0)\n3. Progressively add terms: P₁(x), P₂(x), P₃(x), ...\n4. Color-code each added term (e.g., red for linear, blue for quadratic, green for cubic)\n5. Animate each partial sum being drawn on top of the function\n6. Show numerical coefficients of the Taylor series\n7. Display text explaining convergence: 'Higher-order terms improve approximation'\n8. Animate 5–8 terms, showing convergence toward the original function",
+      "required_visual_events": [
+        {
+          "id": "evt_010_original",
+          "description": "Original function (e.g., sin(x) or eˣ) plotted in black/dark color as reference",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start_persistent"
+        },
+        {
+          "id": "evt_010_partial_sums",
+          "description": "Partial sums P₀, P₁, P₂, ... added ONE AT A TIME with animation (Transform or Create)",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "sequential_main_animation"
+        },
+        {
+          "id": "evt_010_color_code",
+          "description": "Each partial sum colored distinctly (e.g., P₀=red, P₁=blue, P₂=green) and labeled",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "with_each_partial_sum"
+        },
+        {
+          "id": "evt_010_improvement",
+          "description": "Approximation visibly improves with each added term — polynomial curve gets closer to original function",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "visible_across_sequence"
+        },
+        {
+          "id": "evt_010_convergence",
+          "description": "By the final term (5th–8th), approximation closely matches original function in visible region",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_end"
+        }
+      ],
+      "coverage_requirements": [
+        "Numerical coefficients of Taylor series shown (e.g., 1, x, x²/2!, x³/3!, ...)",
+        "Term labels (P₀, P₁, P₂, ... or 'Order 0', 'Order 1', ...)",
+        "Color coding consistent — each order has its own color",
+        "Convergence explanation text present ('Higher-order terms improve approximation')",
+        "Original function visible throughout (not covered by partial sums)"
+      ],
+      "success_criteria": {
+        "executability_min": 0.8,
+        "alignment_score_min": 0.75,
+        "coverage_score_min": 0.8,
+        "version_conflict_error_rate_max": 0.05
+      },
+      "common_failure_modes": [
+        "Terms added all at once instead of sequentially [CRITICAL DRIFT — defeats entire purpose]",
+        "Color coding missing or inconsistent across terms",
+        "Coefficients not displayed (no numeric annotation)",
+        "No visual indication of improving approximation (all partial sums look similar)",
+        "Original function missing or hard to see under partial sums",
+        "Wrong Taylor coefficients computed (mathematical error)",
+        "Partial sums plotted on wrong x-range (too narrow to see convergence)",
+        "Previous partial sum not removed or faded — visual clutter"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "GraphScene → Axes in CE",
+          "ReconfigurableScene → no CE equivalent",
+          "TeacherStudentsScene/PiCreature system → not in CE",
+          "AreaIsDerivative → custom implementation needed",
+          "align_using_submobjects in next_to() → may not be supported in CE",
+          "FullScreenFadeRectangle → FullScreenRectangle in CE",
+          "self.foreground_mobjects → z_index or bring_to_front in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that any smooth function can be approximated by polynomials of increasing degree. The sequential, one-at-a-time addition of terms is the core pedagogical device — it builds intuition about how each additional term captures finer detail of the function's behavior.",
+      "raw_code_path": "raw_code/taylor_series/",
+      "raw_code_files": [
+        "chapter10.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 3676,
+        "scene_classes": [
+          {
+            "class_name": "ExampleApproximation",
+            "type": "main_scene",
+            "description": "Demonstrates Taylor polynomial approximation of e^{-x²} near x=0, animating successive polynomial orders overlaid on the function.",
+            "key_methods": [
+              "construct",
+              "setup_axes"
+            ]
+          },
+          {
+            "class_name": "Pendulum",
+            "type": "main_scene",
+            "description": "Animates physical pendulum, derives height = R(1-cos(θ)), substitutes quadratic Taylor approximation.",
+            "key_methods": [
+              "construct",
+              "draw_pendulum",
+              "show_oscillation",
+              "substitute_approximation"
+            ]
+          },
+          {
+            "class_name": "ConstructQuadraticApproximation",
+            "type": "main_scene",
+            "description": "Step-by-step construction of quadratic Taylor approx of cos(x) by matching value, first derivative, second derivative.",
+            "key_methods": [
+              "construct",
+              "set_c0_to_one",
+              "show_tangent_slope",
+              "show_matching_curvature",
+              "box_final_answer"
+            ]
+          },
+          {
+            "class_name": "CubicAndQuarticApproximations",
+            "type": "main_scene",
+            "description": "Extends to cubic and quartic terms by matching 3rd and 4th derivatives, demonstrates factorial pattern.",
+            "key_methods": [
+              "construct",
+              "take_third_derivative_of_cubic",
+              "solve_for_c4"
+            ]
+          },
+          {
+            "class_name": "ApproximateNearNewPoint",
+            "type": "main_scene",
+            "description": "Shifts Taylor approximation center along cosine curve, showing polynomial around x=π.",
+            "key_methods": [
+              "construct",
+              "shift_approximation_center"
+            ]
+          },
+          {
+            "class_name": "TranslationOfInformation",
+            "type": "main_scene",
+            "description": "Core pedagogical scene: derivative info at a point ↔ output info near that point. General Taylor polynomial.",
+            "key_methods": [
+              "construct",
+              "show_derivative_pattern",
+              "name_taylor_polynomial",
+              "walk_through_terms"
+            ]
+          },
+          {
+            "class_name": "ExpPolynomial",
+            "type": "main_scene",
+            "description": "Taylor series for e^x: all derivatives equal 1, builds polynomial 1+x+x²/2!+…",
+            "key_methods": [
+              "construct",
+              "show_derivatives",
+              "show_polynomial"
+            ]
+          },
+          {
+            "class_name": "SecondTermIntuition",
+            "type": "main_scene",
+            "description": "Geometric/area-based intuition for second Taylor term: area under curve, rectangle, triangle.",
+            "key_methods": [
+              "construct",
+              "introduce_area",
+              "point_out_triangle"
+            ]
+          },
+          {
+            "class_name": "AskAboutInfiniteSum",
+            "type": "main_scene",
+            "description": "Transitions from polynomial to series; names the infinite sum and warns about convergence.",
+            "key_methods": [
+              "construct",
+              "name_taylor_series"
+            ]
+          },
+          {
+            "class_name": "ExpGraphConvergence",
+            "type": "main_scene",
+            "description": "Graphical convergence of Taylor polynomials for e^x, successive approximations approaching the curve.",
+            "key_methods": [
+              "construct",
+              "get_approx_graphs"
+            ]
+          },
+          {
+            "class_name": "RadiusOfConvergenceForLnX",
+            "type": "main_scene",
+            "description": "Demonstrates radius of convergence for ln(x): convergence at x=1.5 vs divergence at x=2.5.",
+            "key_methods": [
+              "construct",
+              "show_converging_point",
+              "show_diverging_point"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Successive polynomial overlay on function graph (Transform between orders)",
+          "Physical pendulum simulation with parametric rotation",
+          "Dynamic tangent line animations rotating along curves",
+          "Color-coded coefficient tracking (each c_n distinct color)",
+          "Derivative cascade visualization (stacked chain with arrows)",
+          "Animated monomial differentiation (exponent drops as coefficient)",
+          "Geometric area/rectangle/triangle decomposition for Taylor terms",
+          "Partial sum braces with numerical convergence readout",
+          "Sliding approximation center with real-time polynomial update"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "UpdateFromFunc",
+            "UpdateFromAlphaFunc (tangent line interpolation, approximation center sliding)"
+          ],
+          "animation_types": [
+            "ShowCreation",
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "Transform",
+            "ReplacementTransform",
+            "Rotate",
+            "MoveToTarget",
+            "ApplyWave",
+            "FocusOn"
+          ],
+          "3d_constructs": [],
+          "layout_methods": [
+            "to_corner",
+            "to_edge",
+            "next_to",
+            "Brace",
+            "shift_onto_screen",
+            "add_background_rectangle"
+          ],
+          "custom_classes": [
+            "GraphScene",
+            "ReconfigurableScene",
+            "TeacherStudentsScene",
+            "OpeningQuote",
+            "AreaIsDerivative"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-011",
+      "title": "The Hairy Ball Theorem",
+      "youtube_video_id": "BHdbsHFs2P0",
+      "category": [
+        "direct-visualization",
+        "multi-scene"
+      ],
+      "difficulty_level": 5,
+      "domain": [
+        "topology",
+        "vector-fields"
+      ],
+      "estimated_complexity": "very-high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate the Hairy Ball Theorem: a continuous tangent vector field on a 2-sphere must have at least one zero (a 'bald spot'). Render a 3D sphere with dense tangent vectors, attempt to comb them all to be nonzero and continuous, show where this inevitably fails, and highlight the bald spot. This is the hardest problem in the dataset (Level 5).",
+      "full_prompt": "Animate the Hairy Ball Theorem: a continuous vector field on a 2-sphere must have at least one point where the vector is zero (a 'bald spot'). Show:\n1. A 3D sphere rendered with rotation/camera movement\n2. A vector field drawn on the sphere (many small arrows pointing tangent to the surface)\n3. Attempt to orient all vectors continuously (smoothly, without discontinuities)\n4. Show that this is impossible: at least one point must have zero vector (bald spot)\n5. Animate the 'combing' process, showing where tangency requirements fail\n6. Highlight the bald spot with special visual marker",
+      "required_visual_events": [
+        {
+          "id": "evt_011_sphere",
+          "description": "3D sphere rendered with proper shading, lighting, and camera rotation to show it's truly 3-dimensional",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_011_vector_field",
+          "description": "Dense tangent vector field visualized as many small arrows on the sphere's surface, all pointing tangent (not normal)",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "after_sphere"
+        },
+        {
+          "id": "evt_011_combing",
+          "description": "Combing/alignment animated — vectors rotate/reorient in an attempt to all point in a consistent direction",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "main_animation"
+        },
+        {
+          "id": "evt_011_discontinuity",
+          "description": "Discontinuity or impossibility becomes evident — vectors near the bald spot become erratic, shrink to zero, or show visible conflict",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "during_combing"
+        },
+        {
+          "id": "evt_011_bald_spot",
+          "description": "Bald spot highlighted with special visual marker (glowing dot, color change, or label)",
+          "weight": 0.7,
+          "is_critical": true,
+          "timing": "after_combing_fails"
+        }
+      ],
+      "coverage_requirements": [
+        "Sphere clearly 3D with proper perspective (not a flat circle projection)",
+        "Vector field dense enough to be meaningful (≥30–50 visible arrows)",
+        "Combing process shown progressively (not instant)",
+        "Bald spot visually distinct from rest of sphere",
+        "Title or text explanation of the theorem",
+        "Camera rotation to show the sphere from multiple angles"
+      ],
+      "success_criteria": {
+        "executability_min": 0.7,
+        "alignment_score_min": 0.65,
+        "coverage_score_min": 0.6,
+        "version_conflict_error_rate_max": 0.1
+      },
+      "common_failure_modes": [
+        "Sphere not rendered in 3D (appears as flat 2D circle) [CRITICAL]",
+        "Vector field missing or too sparse (<10 arrows, meaningless)",
+        "Combing process not animated (static before/after, no progression)",
+        "Bald spot not identified or highlighted",
+        "Theorem's impossibility not demonstrated (vectors all seem fine)",
+        "Vectors point normal to sphere instead of tangent (wrong geometry)",
+        "Rendering times out (>30 seconds) due to too many 3D objects",
+        "Arrow3D or similar 3D vector objects not supported or too slow",
+        "Camera doesn't rotate — can't see the sphere is actually 3D"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "InteractiveScene → ThreeDScene in CE",
+          "self.frame → self.camera.frame in CE",
+          "frame.reorient(theta, phi, gamma) → set_euler_angles in CE",
+          "frame.add_ambient_rotation() → custom updater in CE",
+          "Sphere.set_clip_plane → not in CE",
+          "always_sort_to_camera → set_z_index in CE",
+          "TexturedSurface/TexturedGeometry → limited texture support in CE",
+          ".obj model loading → not available in CE",
+          "DotCloud with per-point radius/opacity → simpler CE DotCloud",
+          "StreamLines/AnimatedStreamLines → different constructor in CE",
+          "apply_depth_test()/deactivate_depth_test() → not in CE Cairo renderer",
+          "set_perpendicular_to_camera → not in CE",
+          "TimeVaryingVectorField → manual updater in CE",
+          "TracingTail → TracedPath in CE",
+          "GlowDot → no CE equivalent"
+        ]
+      },
+      "pedagogical_intent": "Demonstrate a surprising topological fact: you cannot comb the hair on a sphere smooth — there must always be at least one bald spot (zero vector). This is the hardest problem in the dataset because it requires 3D rendering, dense vector fields, and animation of a topological impossibility proof. The combing attempt and eventual failure are the essential pedagogical elements.",
+      "raw_code_path": "raw_code/hairy_ball/",
+      "raw_code_files": [
+        "spheres.py",
+        "supplements.py",
+        "model3d.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 3796,
+        "scene_classes": [
+          {
+            "class_name": "SphereStreamLines",
+            "type": "helper",
+            "description": "Custom StreamLines subclass constraining stream line points to unit sphere surface via normalization. Fibonacci sphere distribution.",
+            "key_methods": [
+              "__init__",
+              "get_sample_coords",
+              "draw_lines"
+            ]
+          },
+          {
+            "class_name": "S3Viking",
+            "type": "helper",
+            "description": "Custom TexturedGeometry loading a 3D airplane .obj model, with heading/wing vector repositioning.",
+            "key_methods": [
+              "__init__",
+              "reposition",
+              "place_on_path"
+            ]
+          },
+          {
+            "class_name": "RadioTower",
+            "type": "helper",
+            "description": "VGroup constructing a 3D radio tower with legs and cross-struts.",
+            "key_methods": [
+              "__init__"
+            ]
+          },
+          {
+            "class_name": "IntroduceVectorField",
+            "type": "main_scene",
+            "description": "Core intro: tangent plane and single vector on sphere to full dense vector field with earth texture, null points, stream lines.",
+            "key_methods": [
+              "construct",
+              "get_vector_field"
+            ]
+          },
+          {
+            "class_name": "StereographicProjection",
+            "type": "main_scene",
+            "description": "Demonstrates stereographic projection sphere→plane with dots, lines, inverse projection, and projected flow.",
+            "key_methods": [
+              "construct",
+              "flow_with_projection_insertion"
+            ]
+          },
+          {
+            "class_name": "PairsOfNullPoints",
+            "type": "main_scene",
+            "description": "Shows vector fields with pairs of null points using source/sink and twirl functions via stereographic projection.",
+            "key_methods": [
+              "construct",
+              "get_spherical_field"
+            ]
+          },
+          {
+            "class_name": "InsideOut",
+            "type": "main_scene",
+            "description": "Demonstrates antipode map on colored sphere, point-to-antipode paths, cap inversion, normal vector reversal. Central to proof.",
+            "key_methods": [
+              "construct",
+              "get_colored_sphere"
+            ]
+          },
+          {
+            "class_name": "DefineOrientation",
+            "type": "main_scene",
+            "description": "Defines surface orientation via lat/lon labels, tangent vectors, normals, coordinate-preserving warps, antipode map.",
+            "key_methods": [
+              "construct"
+            ]
+          },
+          {
+            "class_name": "FlowingWater",
+            "type": "main_scene",
+            "description": "Simulates water flowing from source on sphere using DotCloud of 1M particles with inverse-square-law velocity.",
+            "key_methods": [
+              "construct",
+              "get_water"
+            ]
+          },
+          {
+            "class_name": "ProjectedCombedHypersphere",
+            "type": "main_scene",
+            "description": "Visualizes combed 4D hypersphere (S³) via stereographic projection to 3D, rendering 2000 flow lines as great circles.",
+            "key_methods": [
+              "construct",
+              "streo_4d_to_3d"
+            ]
+          },
+          {
+            "class_name": "OrientAModel",
+            "type": "main_scene",
+            "description": "Shows hairy ball problem in practice: 3D airplane model oriented along trajectories, impossibility of continuous wing vector.",
+            "key_methods": [
+              "construct",
+              "alternate_trajectories"
+            ]
+          },
+          {
+            "class_name": "RadioBroadcast",
+            "type": "main_scene",
+            "description": "Visualizes EM wave propagation from radio tower, connecting to hairy ball theorem via polarization.",
+            "key_methods": [
+              "construct"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Fibonacci sphere sampling for uniform point distribution",
+          "Stereographic projection (sphere ↔ plane) for vector field mapping",
+          "Animated stream lines on curved surfaces",
+          "DotCloud particle systems (up to 1M particles) for fluid simulation",
+          "Earth texture mapping on spheres (TexturedSurface)",
+          "3D model loading and repositioning along parametric curves",
+          "Homotopy deformations of surfaces",
+          "Normal vector fields computed from UV cross products",
+          "Antipode map visualization with dashed connecting lines",
+          "4D → 3D stereographic projection for hypersphere",
+          "Depth testing toggling for layered 3D rendering",
+          "Color-coded vector fields (outward=blue, inward=red)"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "always_sort_to_camera",
+            "add_updater (rotation, become, fix_in_frame)",
+            "always_redraw",
+            "TracedPath/TracingTail",
+            "ValueTracker",
+            "DotCloud flow updater"
+          ],
+          "animation_types": [
+            "ShowCreation",
+            "Write",
+            "FadeIn",
+            "FadeOut",
+            "GrowArrow",
+            "Transform",
+            "Rotate",
+            "Homotopy",
+            "AnimatedStreamLines",
+            "VShowPassingFlash",
+            "ShowIncreasingSubsets",
+            "MoveAlongPath"
+          ],
+          "3d_constructs": [
+            "ThreeDAxes",
+            "Sphere (with clip_plane)",
+            "SurfaceMesh",
+            "ParametricSurface",
+            "TexturedSurface",
+            "TexturedGeometry (.obj)",
+            "Torus",
+            "DotCloud (make_3d)",
+            "VCube",
+            "frame.reorient/add_ambient_rotation"
+          ],
+          "layout_methods": [
+            "fix_in_frame()",
+            "arrange",
+            "next_to",
+            "to_corner",
+            "SurroundingRectangle",
+            "Underline",
+            "Brace"
+          ],
+          "custom_classes": [
+            "SphereStreamLines",
+            "S3Viking",
+            "RadioTower",
+            "InteractiveScene",
+            "TeacherStudentsScene"
+          ]
+        }
+      }
+    },
+    {
+      "id": "MB-012",
+      "title": "The Unexpectedly Hard Windmill Problem",
+      "youtube_video_id": "M64HUIJFTZM",
+      "category": [
+        "drift-sensitive",
+        "multi-scene"
+      ],
+      "difficulty_level": 4,
+      "domain": [
+        "geometry",
+        "combinatorics"
+      ],
+      "estimated_complexity": "high",
+      "raw_code_status": "collected",
+      "brief_description": "Animate the windmill problem (IMO 2011 Problem 2). A line rotates continuously through a set of points in general position, always passing through exactly one point (the pivot). When the line hits a new point, it pivots around that new point. The line must rotate smoothly through 360°, visiting every point as a pivot.",
+      "full_prompt": "Animate the windmill problem: given n points in general position, a rotating line sweeps continuously and passes through at least two points at all times. Show:\n1. A set of n points (e.g., 5–8) scattered randomly\n2. A line starting horizontal, passing through two points\n3. The line rotates continuously (angular velocity constant or nearly constant)\n4. Whenever the line is about to lose a point, it pivots to pick up a new point (to maintain 2-point contact)\n5. Animate the pivoting process\n6. Show the line rotating through a full 180°, demonstrating that the pattern repeats\n7. Visualize the 'windmill' motion dynamically",
+      "required_visual_events": [
+        {
+          "id": "evt_012_points",
+          "description": "Set of n points (5–8) scattered in general position, each visually distinct (colored dots)",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_012_line_initial",
+          "description": "Line rendered passing through initial pivot point, extending across the screen",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "scene_start"
+        },
+        {
+          "id": "evt_012_rotation",
+          "description": "Line rotates smoothly and continuously around current pivot point",
+          "weight": 0.9,
+          "is_critical": true,
+          "timing": "continuous_main_animation"
+        },
+        {
+          "id": "evt_012_pivot",
+          "description": "Pivot transitions occur at geometrically correct times — when line reaches the next point, pivot transfers smoothly",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "at_each_point_hit"
+        },
+        {
+          "id": "evt_012_contact",
+          "description": "Line always passes through exactly one point (the current pivot), hitting others as it sweeps",
+          "weight": 0.8,
+          "is_critical": true,
+          "timing": "continuous_constraint"
+        },
+        {
+          "id": "evt_012_180",
+          "description": "Full 180° (or 360°) rotation completed, demonstrating the periodic nature of the windmill process",
+          "weight": 0.7,
+          "is_critical": false,
+          "timing": "scene_end"
+        }
+      ],
+      "coverage_requirements": [
+        "Points labeled or visually distinct (different colors, sizes, or numbered)",
+        "Current pivot point highlighted (glow, larger size, or distinct color)",
+        "Line clearly passes through current pivot point at all times",
+        "Rotation direction clear and consistent (clockwise or counterclockwise)",
+        "Pivot transition moments visually marked (flash, color change, or sound)"
+      ],
+      "success_criteria": {
+        "executability_min": 0.75,
+        "alignment_score_min": 0.7,
+        "coverage_score_min": 0.65,
+        "version_conflict_error_rate_max": 0.08
+      },
+      "common_failure_modes": [
+        "Pivots occur randomly or at wrong times [CRITICAL TIMING ERROR — must be geometrically correct]",
+        "Line loses contact with pivot point during rotation",
+        "Rotation not smooth (jerky, discontinuous, or teleporting)",
+        "180° or 360° rotation not completed",
+        "Points not clearly distinguished from each other",
+        "Pivot point not highlighted — viewer can't tell which point is current pivot",
+        "Points placed in degenerate position (collinear) breaking the algorithm",
+        "Line doesn't extend to screen edges (appears as short segment)",
+        "Angular velocity changes erratically instead of being smooth"
+      ],
+      "version_conflict_notes": {
+        "original_framework": "manim_gl (3Blue1Brown's fork via manim_imports_ext)",
+        "target_framework": "manim_ce",
+        "known_incompatibilities": [
+          "manim_imports_ext → from manim import *",
+          "CONFIG dict pattern → __init__ parameters in CE",
+          "OldTex/OldTexText → Tex/MathTex in CE",
+          "force_skipping/revert_to_original_skipping_status → not in CE",
+          "MovingCameraScene with self.camera_frame → self.camera.frame in CE",
+          "PiCreature ecosystem → not in CE",
+          "Clock/ClockPassesTime → custom implementation needed",
+          "Lightbulb SVGMobject → custom implementation needed",
+          "FullScreenFadeRectangle → FullScreenRectangle in CE",
+          "add_sound() → different path resolution in CE",
+          "append_vectorized_mobject() → append_points() in CE",
+          "FadeInFrom(m, LEFT) → FadeIn(m, shift=LEFT) in CE",
+          "background_stroke_width/color → set_stroke(background=True) in CE",
+          "GREY_E/GREY_B/GREY_BROWN colors → may differ in CE"
+        ]
+      },
+      "pedagogical_intent": "Show that for any finite set of points in general position, a windmill process exists where a line rotates continuously, pivoting when it hits each point. The geometric elegance is that timing is determined entirely by point positions — pivots happen at precisely the right angles. This was IMO 2011 Problem 2, and the animation makes the solution strategy visually obvious.",
+      "raw_code_path": "raw_code/windmill/",
+      "raw_code_files": [
+        "windmill.py"
+      ],
+      "reference_code_analysis": {
+        "framework": "manim_gl (3Blue1Brown's personal fork, manim_imports_ext)",
+        "total_lines": 4135,
+        "scene_classes": [
+          {
+            "class_name": "WindmillScene",
+            "type": "helper",
+            "description": "Core base class providing windmill simulation: random point generation, windmill line creation, pivot rotation, hit detection, flash effects, pivot counters, orientation arrows, left/right region colorings.",
+            "key_methods": [
+              "get_random_point_set",
+              "get_dots",
+              "get_windmill",
+              "next_pivot_and_angle",
+              "rotate_to_next_pivot",
+              "let_windmill_run",
+              "add_dot_color_updater",
+              "get_pivot_counters",
+              "get_orientation_arrows",
+              "get_left_right_colorings"
+            ]
+          },
+          {
+            "class_name": "IntroduceIMO",
+            "type": "main_scene",
+            "description": "Introduces IMO with animated country flags, student dots, and logo.",
+            "key_methods": [
+              "construct",
+              "show_flags",
+              "show_students"
+            ]
+          },
+          {
+            "class_name": "ShowTest",
+            "type": "main_scene",
+            "description": "Displays IMO 2011 test pages, problem rectangles, proof labels, and animated scoring.",
+            "key_methods": [
+              "construct",
+              "introduce_test"
+            ]
+          },
+          {
+            "class_name": "IntroduceWindmill",
+            "type": "main_scene",
+            "description": "Introduces windmill step by step: places points, adds rotating line, demonstrates pivot switching with sounds, runs with counters.",
+            "key_methods": [
+              "construct",
+              "add_points",
+              "add_line",
+              "switch_pivots",
+              "continue_and_count"
+            ]
+          },
+          {
+            "class_name": "PerfectScoreData",
+            "type": "main_scene",
+            "description": "Visualizes perfect score statistics for each problem using animated growing bars with color gradients.",
+            "key_methods": [
+              "construct",
+              "show_data",
+              "analyze_data"
+            ]
+          },
+          {
+            "class_name": "TryOutSimplestExamples",
+            "type": "main_scene",
+            "description": "Progressive build from 2 to 4 points showing edge cases: third point fine, fourth off-axis 'Never hit!' until repositioned.",
+            "key_methods": [
+              "construct",
+              "two_points",
+              "add_third_point",
+              "add_fourth_point"
+            ]
+          },
+          {
+            "class_name": "WhereItStartsItEnds",
+            "type": "main_scene",
+            "description": "Key insight: windmill 'Starts in the middle' and 'Stays in the middle', shadow copies of line.",
+            "key_methods": [
+              "construct",
+              "show_stays_in_middle"
+            ]
+          },
+          {
+            "class_name": "FormalizeMiddle",
+            "type": "main_scene",
+            "description": "Formalizes 'middle' via problem-solving tips, defines blue/brown dot colorings via orientation arrows, counts sides.",
+            "key_methods": [
+              "construct",
+              "define_colors",
+              "mention_odd_case"
+            ]
+          },
+          {
+            "class_name": "TalkThroughPivotChange",
+            "type": "main_scene",
+            "description": "Carefully walks through single pivot change: above/below halves, orientation arrows, color swap preserving count invariant.",
+            "key_methods": [
+              "construct",
+              "show_above_and_below",
+              "change_pivot"
+            ]
+          },
+          {
+            "class_name": "Rotate180Argument",
+            "type": "main_scene",
+            "description": "180° rotation argument: total rotation counter, parallel lines through all points, windmill returns to parallel config.",
+            "key_methods": [
+              "construct",
+              "add_total_rotation_label",
+              "rotate_180",
+              "show_parallel_lines"
+            ]
+          },
+          {
+            "class_name": "EvenCase",
+            "type": "main_scene",
+            "description": "Addresses even-number case: distinguishes pivot counting, chooses halfway point P₀, 180° rotation.",
+            "key_methods": [
+              "construct",
+              "choose_halfway_point"
+            ]
+          }
+        ],
+        "visual_techniques": [
+          "Windmill line rotation with real-time pivot switching and click sounds",
+          "Left/right region coloring via updater-driven VMobject polygons",
+          "Orientation arrows (ArrowTips along windmill line)",
+          "Shadow trail of previous windmill positions",
+          "Pivot hit counters with per-frame updaters",
+          "Dot color updaters (blue/brown) based on signed perpendicular distance",
+          "Flash effects on pivot contact (radial line burst)",
+          "Animated bar charts with color-interpolated fill",
+          "Country flag ImageMobject grids",
+          "Total rotation tracker with circular arrow indicator",
+          "SVG-based illustrations (windmill fairy tale, Don Quixote)",
+          "Lightbulb with concentric Annulus radiation rings"
+        ],
+        "manim_api_patterns": {
+          "updaters_used": [
+            "line.add_updater (windmill follows pivot)",
+            "pivot_dot.add_updater (dot tracks pivot)",
+            "counter.add_updater (hit counting)",
+            "dot.add_updater (blue/brown coloring)",
+            "rects.add_updater (region polygons)",
+            "rot_arrow.add_updater (rotation indicator)"
+          ],
+          "animation_types": [
+            "Rotate",
+            "LaggedStartMap",
+            "FadeIn",
+            "FadeOut",
+            "GrowArrow",
+            "ShowCreation",
+            "Write",
+            "ReplacementTransform",
+            "ShowIncreasingSubsets",
+            "Flash",
+            "VFadeInThenOut",
+            "ClockPassesTime",
+            "DrawBorderThenFill"
+          ],
+          "3d_constructs": [],
+          "layout_methods": [
+            "arrange",
+            "arrange_in_grid",
+            "next_to",
+            "to_edge",
+            "match_height",
+            "space_out_submobjects"
+          ],
+          "custom_classes": [
+            "WindmillScene",
+            "IntroduceIMO",
+            "ShowTest",
+            "PerfectScoreData",
+            "TeacherStudentsScene",
+            "MovingCameraScene",
+            "Clock",
+            "Lightbulb"
+          ]
+        }
+      }
+    }
+  ]
+}

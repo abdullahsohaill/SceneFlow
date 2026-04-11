@@ -1,0 +1,11 @@
+{
+  "total_raw": 2407,
+  "parse_failed": 6,
+  "ce_compatible": 2379,
+  "needs_conversion": 2338,
+  "gl_only": 21,
+  "below_threshold": 1,
+  "kept": 2379,
+  "train_size": 2142,
+  "val_size": 237
+}
