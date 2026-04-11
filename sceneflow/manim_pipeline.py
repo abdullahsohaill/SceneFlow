@@ -1,11 +1,10 @@
 """
 SceneFlow API — Manim Video Pipeline
 ======================================
-Orchestrates the Audio-First Multi-Agent rendering flow:
-  1. TTS audio generation  (edge-tts)
-  2. LLM Animator generation (pass audio duration to sync)
-  3. Manim rendering       (Code + Audio -> .mp4)
-  4. Final concatenation    (ffmpeg concat demuxer)
+Orchestrates the Audio-First Multi-Agent rendering flow with Parallelism:
+  1. (Sequential) Agent 1 & Agent 2: Storyboard & Code Generation (Context Chaining)
+  2. (Parallel) Manim Rendering of all scenes simultaneously.
+  3. (Sequential) Final concatenation.
 """
 
 from __future__ import annotations
@@ -15,6 +14,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from mutagen.mp3 import MP3
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 # Step 1 — Audio Generation
 # ══════════════════════════════════════════════
 
-def generate_audio(scene: DirectorScene, work_dir: Path) -> tuple[Path, float]:
+def generate_audio_step(scene: DirectorScene, work_dir: Path) -> tuple[Path, float]:
     """Generate TTS audio for a scene using edge-tts."""
     audio_path = work_dir / f"{scene.scene_id}.mp3"
 
@@ -53,7 +54,26 @@ def generate_audio(scene: DirectorScene, work_dir: Path) -> tuple[Path, float]:
 
 
 # ══════════════════════════════════════════════
-# Step 2 — Concatenate All Scenes
+# Step 2 — Parallel Rendering Helper
+# ══════════════════════════════════════════════
+
+def render_scene_task(scene_id: str, code: str, narration: str, work_dir: Path) -> Path:
+    """Helper used in ThreadPool to render a single scene."""
+    scene_work_dir = work_dir / scene_id
+    scene_work_dir.mkdir(exist_ok=True)
+    
+    logger.info(f"Parallel Render Started: {scene_id}")
+    return render_manim_scene(
+        manim_code=code,
+        scene_class_name="ExplainerScene",
+        work_dir=scene_work_dir,
+        quality="l",
+        narration_text=narration,
+    )
+
+
+# ══════════════════════════════════════════════
+# Step 3 — Post-Processing
 # ══════════════════════════════════════════════
 
 def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) -> Path:
@@ -61,7 +81,8 @@ def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) ->
     concat_file = work_dir / "concat_list.txt"
     with open(concat_file, "w") as f:
         for video_path in scene_videos:
-            f.write(f"file '{video_path}'\\n")
+            # Absolute path with escaped backslashes for ffmpeg
+            f.write(f"file '{video_path}'\n")
 
     output_path = work_dir / f"final_video_{job_id}.mp4"
 
@@ -80,10 +101,6 @@ def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) ->
     logger.info("Final video → %s", output_path)
     return output_path
 
-
-# ══════════════════════════════════════════════
-# Step 3 — Cleanup
-# ══════════════════════════════════════════════
 
 def cleanup(work_dir: Path, final_video: Path, output_dir: Path, job_id: str) -> Path:
     """Move final video to output directory and clean up intermediates."""
@@ -104,31 +121,34 @@ def cleanup(work_dir: Path, final_video: Path, output_dir: Path, job_id: str) ->
 
 def run_manim_pipeline(draft: DirectorStoryboard, job_id: str) -> str:
     """
-    Multi-Agent Audio-First Pipeline:
-    1. Generate TTS per scene
-    2. Feed audio length to Animator Agent for exact timing sync
-    3. Render the code (Manim automatically merges the audio)
-    4. Concat the clips.
+    Optimized Parallel Pipeline:
+    1. (Sequential) Generate all TTS and LLM Code first.
+    2. (Parallel) Spin up threads to render all Manim clips simultaneously.
+    3. (Sequential) Merge and Cleanup.
     """
     settings.validate()
 
     work_dir = Path(tempfile.mkdtemp(prefix=f"sceneflow_manim_{job_id}_"))
-    logger.info("Manim multi-agent pipeline started for job %s in %s", job_id, work_dir)
+    logger.info("Manim Parallel Pipeline started for job %s", job_id)
 
-    scene_videos: list[Path] = []
-    
     bg_color = "#0F172A"
     if draft.style_config.brand_colors:
         bg_color = draft.style_config.brand_colors[0]
 
+    # --- Phase 1: Sequential Generation (Requires Context) ---
+    generation_results = []
     previous_code = ""
 
     for scene in draft.scenes:
-        # 1. Generate Voice Audio (Get absolute duration)
-        tts_path, tts_duration = generate_audio(scene, work_dir)
+        # Rate limit protection for Gemini API
+        if len(generation_results) > 0:
+            time.sleep(2)
 
-        # 2. Call Animator Agent (Context Chaining)
-        logger.info(f"Agent 2 Context Chaining: Generating Manim Code for {scene.scene_id} using length {tts_duration:.2f}s")
+        # 1. TTS
+        tts_path, tts_duration = generate_audio_step(scene, work_dir)
+
+        # 2. LLM Code
+        logger.info(f"Generating Code for {scene.scene_id} ({tts_duration:.2f}s)")
         manim_code = generate_scene_manim_code(
             scene_plan=scene,
             bg_color=bg_color,
@@ -136,28 +156,29 @@ def run_manim_pipeline(draft: DirectorStoryboard, job_id: str) -> str:
             audio_path=str(tts_path),
             previous_code=previous_code
         )
-        
-        # Save previous context state for the NEXT loop iteration
         previous_code = manim_code
-
-        # 3. Compile Manim 
-        scene_work_dir = work_dir / scene.scene_id
-        scene_work_dir.mkdir(exist_ok=True)
-        manim_video_path = render_manim_scene(
-            manim_code=manim_code,
-            scene_class_name="ExplainerScene",
-            work_dir=scene_work_dir,
-            quality="l",
-            narration_text=scene.narration_text,
-        )
         
-        scene_videos.append(manim_video_path)
+        generation_results.append({
+            "id": scene.scene_id,
+            "code": manim_code,
+            "narration": scene.narration_text
+        })
 
-    # 4. Concatenate
+    # --- Phase 2: Parallel Rendering (CPU Bound in subprocess) ---
+    logger.info(f"Starting Parallel Rendering for {len(generation_results)} scenes...")
+    
+    scene_videos: list[Path] = []
+    # Using threads because the actual work is done in a separate 'manim' subprocess
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [
+            executor.submit(render_scene_task, res["id"], res["code"], res["narration"], work_dir)
+            for res in generation_results
+        ]
+        scene_videos = [f.result() for f in futures]
+
+    # --- Phase 3: Finalize ---
     final_video = concatenate_scenes(scene_videos, job_id, work_dir)
-
-    # 5. Cleanup
     final_dest = cleanup(work_dir, final_video, Path(settings.OUTPUT_DIR), job_id)
 
-    logger.info("Manim pipeline completed for job %s → %s", job_id, final_dest)
+    logger.info("Parallel pipeline completed for job %s", job_id)
     return str(final_dest)

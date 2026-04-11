@@ -99,7 +99,7 @@
                 <div id="progressState" class="hidden flex-col items-center w-full px-4">
                     <div class="loader w-12 h-12 border-4 border-slate-700 rounded-full mb-6"></div>
                     <h3 id="statusTitle" class="text-xl font-semibold text-white mb-2">Drafting Script...</h3>
-                    <p id="statusDesc" class="text-sm text-slate-400 text-center">Using Gemini Flash 2.5 to generate the Scene DSL.</p>
+                    <p id="statusDesc" class="text-sm text-slate-400 text-center">Using Gemini 2.5 Flash to generate the multi-scene storyboard.</p>
                     
                     <div class="w-full bg-slate-800 rounded-full h-2 mt-6 overflow-hidden">
                         <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full w-1/4 transition-all duration-500"></div>
@@ -151,7 +151,7 @@
             // 1. Draft
             setUIState('progress', 'Generating Manim Script...', 'Gemini is writing animated Manim Python code for each scene.', 25);
             try {
-                const draftRes = await fetch(`${API_BASE}/api/v1/draft-manim`, {
+                const draftRes = await fetch(`${API_BASE}/api/v1/draft`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -168,8 +168,8 @@
                 const draftData = await draftRes.json();
 
                 // 2. Render
-                setUIState('progress', 'Rendering Animations...', 'Manim is rendering animated scenes + edge-tts narration. ~60 seconds.', 60);
-                const renderRes = await fetch(`${API_BASE}/api/v1/render-manim`, {
+                setUIState('progress', 'Rendering Animations...', 'Agentic Animator is generating Manim code + edge-tts narration. ~60 seconds.', 60);
+                const renderRes = await fetch(`${API_BASE}/api/v1/render`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ draft: draftData.draft })

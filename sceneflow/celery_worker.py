@@ -35,9 +35,9 @@ celery_app.conf.update(
     enable_utc=True,
     # Prevent prefetching — each render task is heavy
     worker_prefetch_multiplier=1,
-    # Long timeout for video rendering (10 minutes)
-    task_time_limit=600,
-    task_soft_time_limit=540,
+    # Long timeout for deep multi-agent video rendering (30 minutes)
+    task_time_limit=1800,
+    task_soft_time_limit=1740,
 )
 
 

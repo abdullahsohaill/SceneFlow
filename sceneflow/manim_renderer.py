@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 from pathlib import Path
+from google.genai import errors
 
 logger = logging.getLogger(__name__)
 
@@ -81,31 +83,26 @@ def _attempt_llm_fix(original_code: str, error_msg: str) -> str:
     """Ask Gemini to fix the broken Manim code."""
     try:
         from google import genai
-        from google.genai import types
+        from google.genai import types, errors
         from .config import settings
 
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        prompt = f"""The following Manim Python code failed to render with this error:
 
-ERROR:
-{error_msg[:1000]}
+        # Retry logic for parallel 503 spikes
+        response = None
+        for i in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(temperature=0.3),
+                )
+                break
+            except (errors.ClientError, Exception) as e:
+                if i == 2: raise e
+                time.sleep(2 * (i + 1))
 
-ORIGINAL CODE:
-{original_code}
-
-Fix the code. Return ONLY the corrected Python code, nothing else.
-Rules:
-- Keep 'from manim import *' at the top
-- Keep the class named 'ExplainerScene'
-- Do NOT use SVGMobject, ImageMobject, or ThreeDScene
-- Avoid complex numpy operations on Manim color objects
-- Use simple shapes: Text, Rectangle, Circle, Arrow, etc.
-"""
-        response = client.models.generate_content(
-            model="gemini-3-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(temperature=0.3),
-        )
+        if not response: return ""
         fixed = response.text.strip()
         # Strip markdown fences
         if fixed.startswith("```python"):
