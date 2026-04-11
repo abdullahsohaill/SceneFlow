@@ -11,7 +11,7 @@ import uuid
 from celery import Celery
 
 from .config import settings
-from .schemas import ManimDraft
+from .schemas import DirectorStoryboard
 from .manim_pipeline import run_manim_pipeline
 
 logger = logging.getLogger(__name__)
@@ -49,12 +49,12 @@ def render_manim_task(self, draft_dict: dict, job_id: str) -> dict:
     animated .mp4 segments, overlaid with TTS audio, and concatenated.
     """
     try:
-        from .schemas import ManimDraft
+        from .schemas import DirectorStoryboard
         from .manim_pipeline import run_manim_pipeline
 
         logger.info("Starting Manim render task for job %s", job_id)
 
-        draft = ManimDraft.model_validate(draft_dict)
+        draft = DirectorStoryboard.model_validate(draft_dict)
         result_path = run_manim_pipeline(draft, job_id)
 
         from pathlib import Path

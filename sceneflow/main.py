@@ -20,7 +20,7 @@ from .schemas import (
     ManimRenderRequest,
     RenderResponse,
 )
-from .llm_engine import generate_manim_scenes
+from .llm_engine import generate_director_plan
 from .celery_worker import celery_app, render_manim_task
 
 # ──────────────────────────────────────────────
@@ -140,8 +140,8 @@ async def create_manim_draft(request: DraftRequest):
     """
     try:
         logger.info("Manim draft request: topic='%s'", request.topic)
-        draft = generate_manim_scenes(request)
-        logger.info("Manim draft generated: %d scenes", len(draft.scenes))
+        draft = generate_director_plan(request)
+        logger.info("Director plan generated: %d scenes", len(draft.scenes))
         return ManimDraftResponse(draft=draft)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
