@@ -94,7 +94,7 @@ def generate_draft(request: DraftRequest) -> VideoDraft:
 
     # ── Call Gemini with Pydantic structured output ──────────
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3-flash",
         contents=f"{system_message}\n\nUser Request:\n{user_message}",
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -232,7 +232,7 @@ def generate_manim_scenes(request: DraftRequest) -> "ManimDraft":
     )
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3-flash",
         contents=f"{system_message}\n\nUser Request:\n{user_message}",
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
