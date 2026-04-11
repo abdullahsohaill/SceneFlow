@@ -154,12 +154,6 @@ class DraftRequest(BaseModel):
         default=None,
         description="Optional brand logo URL."
     )
-    num_scenes: int = Field(
-        default=4,
-        ge=2,
-        le=8,
-        description="Number of scenes to generate (2–8)."
-    )
 
 
 class DraftResponse(BaseModel):

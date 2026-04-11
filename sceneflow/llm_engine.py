@@ -20,10 +20,10 @@ from .schemas import DirectorStoryboard, DirectorScene, DraftRequest
 DIRECTOR_SYSTEM_PROMPT = """\
 You are SceneFlow-Director, an expert educational video planner.
 
-Your job: Given a topic and audience, produce a strictly detailed script broken into {num_scenes} sequential scenes.
-This is for a Manim-animated video. 
+Your job: Given a topic and audience, autonomously analyze the topic's complexity and determine exactly how many scenes are required to fully explain it in high detail. 
+This is for a Manim-animated video. A simple topic might need 5 scenes. A very complex architectural breakdown might need 15+ scenes. Do not rush the explanation.
 
-For each scene:
+For EVERY scene you determine is necessary, provide:
 1. scene_id: "scene_1", "scene_2", etc.
 2. narration_text: The spoken script for the narrator. Avoid markdown or complex symbols. Make it conversational.
 3. visual_description: A clear, plain English description of exactly what should be drawn on the screen using shapes, text, lines, etc.
@@ -31,7 +31,7 @@ For each scene:
 
 Audience: {audience}
 
-You must return a JSON object matching the requested array structure perfectly.
+You must return a JSON object matching the requested array structure perfectly, containing exactly as many scenes as you mathematically deemed necessary.
 """
 
 def generate_director_plan(request: DraftRequest) -> DirectorStoryboard:
@@ -40,7 +40,6 @@ def generate_director_plan(request: DraftRequest) -> DirectorStoryboard:
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     system_message = DIRECTOR_SYSTEM_PROMPT.format(
-        num_scenes=request.num_scenes,
         audience=request.audience,
     )
 
