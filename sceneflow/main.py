@@ -15,15 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import (
     DraftRequest,
-    DraftResponse,
-    RenderRequest,
-    RenderResponse,
     JobStatusResponse,
     ManimDraftResponse,
     ManimRenderRequest,
+    RenderResponse,
 )
-from .llm_engine import generate_draft, generate_manim_scenes
-from .celery_worker import celery_app, render_video_task, render_manim_task
+from .llm_engine import generate_manim_scenes
+from .celery_worker import celery_app, render_manim_task
 
 # ──────────────────────────────────────────────
 # Logging
@@ -81,79 +79,6 @@ async def serve_frontend():
 
 
 # ══════════════════════════════════════════════
-# POST /api/v1/draft
-# ══════════════════════════════════════════════
-
-@app.post(
-    "/api/v1/draft",
-    response_model=DraftResponse,
-    tags=["drafting"],
-    summary="Generate a Scene DSL from a topic",
-)
-async def create_draft(request: DraftRequest):
-    """
-    Accepts a topic, audience, and brand settings.
-    Calls the LLM to produce a structured VideoDraft (Scene DSL).
-    Returns the JSON blueprint — does NOT render video.
-    """
-    try:
-        logger.info("Draft request: topic='%s', audience='%s'", request.topic, request.audience)
-
-        draft = generate_draft(request)
-
-        logger.info("Draft generated: %d scenes", len(draft.scenes))
-        return DraftResponse(draft=draft)
-
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        logger.exception("Draft generation failed")
-        raise HTTPException(status_code=500, detail=f"Draft generation failed: {str(e)}")
-
-
-# ══════════════════════════════════════════════
-# POST /api/v1/render
-# ══════════════════════════════════════════════
-
-@app.post(
-    "/api/v1/render",
-    response_model=RenderResponse,
-    tags=["rendering"],
-    summary="Queue a video rendering job",
-)
-async def render_video(request: RenderRequest):
-    """
-    Accepts a (possibly edited) VideoDraft JSON.
-    Dispatches a background Celery task to render the video.
-    Returns a job_id for polling.
-    """
-    try:
-        job_id = str(uuid.uuid4())
-
-        logger.info(
-            "Render request: job_id='%s', scenes=%d",
-            job_id,
-            len(request.draft.scenes),
-        )
-
-        # Serialize the Pydantic model to a dict for Celery's JSON serializer
-        draft_dict = request.draft.model_dump(mode="json")
-
-        # Dispatch the async task
-        render_video_task.apply_async(
-            args=[draft_dict, job_id],
-            task_id=job_id,
-        )
-
-        logger.info("Render job %s queued", job_id)
-        return RenderResponse(job_id=job_id)
-
-    except Exception as e:
-        logger.exception("Failed to queue render job")
-        raise HTTPException(status_code=500, detail=f"Failed to queue render: {str(e)}")
-
-
-# ══════════════════════════════════════════════
 # GET /api/v1/jobs/{job_id}
 # ══════════════════════════════════════════════
 
@@ -199,11 +124,11 @@ async def get_job_status(job_id: str):
 
 
 # ══════════════════════════════════════════════
-# POST /api/v1/draft-manim
+# POST /api/v1/draft
 # ══════════════════════════════════════════════
 
 @app.post(
-    "/api/v1/draft-manim",
+    "/api/v1/draft",
     response_model=ManimDraftResponse,
     tags=["manim"],
     summary="Generate Manim animation code from a topic",
@@ -226,11 +151,11 @@ async def create_manim_draft(request: DraftRequest):
 
 
 # ══════════════════════════════════════════════
-# POST /api/v1/render-manim
+# POST /api/v1/render
 # ══════════════════════════════════════════════
 
 @app.post(
-    "/api/v1/render-manim",
+    "/api/v1/render",
     response_model=RenderResponse,
     tags=["manim"],
     summary="Queue Manim video rendering job",

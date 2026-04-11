@@ -11,8 +11,8 @@ import uuid
 from celery import Celery
 
 from .config import settings
-from .schemas import VideoDraft
-from .video_pipeline import run_pipeline
+from .schemas import ManimDraft
+from .manim_pipeline import run_manim_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -40,58 +40,6 @@ celery_app.conf.update(
     task_soft_time_limit=540,
 )
 
-
-# ──────────────────────────────────────────────
-# Video Rendering Task
-# ──────────────────────────────────────────────
-
-@celery_app.task(bind=True, name="sceneflow.render_video")
-def render_video_task(self, draft_dict: dict, job_id: str) -> dict:
-    """
-    Celery task that deserializes a VideoDraft, runs the full rendering
-    pipeline, and returns the path to the final .mp4.
-
-    Parameters
-    ----------
-    draft_dict : dict
-        Serialized VideoDraft JSON (Celery sends JSON, not Pydantic objects).
-    job_id : str
-        Unique job identifier.
-
-    Returns
-    -------
-    dict
-        {"status": "completed", "result_url": "<path>"} on success,
-        {"status": "failed", "error": "<message>"} on failure.
-    """
-    try:
-        logger.info("Starting render task for job %s", job_id)
-
-        # Deserialize the dict back into a validated Pydantic model
-        draft = VideoDraft.model_validate(draft_dict)
-
-        # Run the full pipeline (TTS → HTML → capture → assemble → concat)
-        result_path = run_pipeline(draft, job_id)
-
-        from pathlib import Path
-        file_name = Path(result_path).name
-        logger.info("Render task completed for job %s → %s", job_id, result_path)
-        return {
-            "status": "completed",
-            "result_url": f"/outputs/{job_id}/{file_name}",
-        }
-
-    except Exception as exc:
-        logger.exception("Render task failed for job %s", job_id)
-        return {
-            "status": "failed",
-            "error": str(exc),
-        }
-
-
-# ──────────────────────────────────────────────
-# Manim Video Rendering Task
-# ──────────────────────────────────────────────
 
 @celery_app.task(bind=True, name="sceneflow.render_manim")
 def render_manim_task(self, draft_dict: dict, job_id: str) -> dict:
