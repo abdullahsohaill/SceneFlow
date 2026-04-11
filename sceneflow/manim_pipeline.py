@@ -1,12 +1,11 @@
 """
 SceneFlow API — Manim Video Pipeline
 ======================================
-Orchestrates the Manim-based rendering flow:
+Orchestrates the Audio-First Multi-Agent rendering flow:
   1. TTS audio generation  (edge-tts)
-  2. Manim rendering       (LLM-generated Python → animated .mp4)
-  3. Audio overlay          (FFmpeg merges TTS onto Manim video)
+  2. LLM Animator generation (pass audio duration to sync)
+  3. Manim rendering       (Code + Audio -> .mp4)
   4. Final concatenation    (ffmpeg concat demuxer)
-  5. Cleanup                (remove intermediates)
 """
 
 from __future__ import annotations
@@ -18,21 +17,21 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import ffmpeg
 from mutagen.mp3 import MP3
 
 from .config import settings
 from .manim_renderer import render_manim_scene
-from .schemas import ManimDraft, ManimScene
+from .schemas import DirectorStoryboard, DirectorScene
+from .llm_engine import generate_scene_manim_code
 
 logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════
-# Step 1 — Audio Generation (same as original)
+# Step 1 — Audio Generation
 # ══════════════════════════════════════════════
 
-def generate_audio(scene: ManimScene, work_dir: Path) -> tuple[Path, float]:
+def generate_audio(scene: DirectorScene, work_dir: Path) -> tuple[Path, float]:
     """Generate TTS audio for a scene using edge-tts."""
     audio_path = work_dir / f"{scene.scene_id}.mp3"
 
@@ -54,71 +53,7 @@ def generate_audio(scene: ManimScene, work_dir: Path) -> tuple[Path, float]:
 
 
 # ══════════════════════════════════════════════
-# Step 2 — Render Manim Scene
-# ══════════════════════════════════════════════
-
-def render_scene_animation(scene: ManimScene, work_dir: Path) -> Path:
-    """Run the LLM-generated Manim code and return the animated .mp4."""
-    scene_work_dir = work_dir / scene.scene_id
-    scene_work_dir.mkdir(exist_ok=True)
-
-    video_path = render_manim_scene(
-        manim_code=scene.manim_code,
-        scene_class_name=scene.scene_class_name,
-        work_dir=scene_work_dir,
-        quality="l",
-        narration_text=scene.narration_text,
-    )
-
-    logger.info("Manim rendered %s → %s", scene.scene_id, video_path)
-    return video_path
-
-
-# ══════════════════════════════════════════════
-# Step 3 — Overlay TTS Audio on Manim Video
-# ══════════════════════════════════════════════
-
-def overlay_audio(
-    manim_video: Path,
-    tts_audio: Path,
-    tts_duration: float,
-    scene_id: str,
-    work_dir: Path,
-) -> Path:
-    """
-    Replace the Manim video's silence with TTS narration.
-    If the Manim video is shorter than the audio, it will be extended.
-    If longer, it will be trimmed to match the audio.
-    """
-    output_path = work_dir / f"{scene_id}_final.mp4"
-
-    logger.info("Overlaying audio on %s (%.2fs)", scene_id, tts_duration)
-
-    v = ffmpeg.input(str(manim_video))
-    a = ffmpeg.input(str(tts_audio))
-
-    (
-        ffmpeg
-        .output(
-            v.video,
-            a,
-            str(output_path),
-            vcodec="libx264",
-            acodec="aac",
-            audio_bitrate="192k",
-            pix_fmt="yuv420p",
-            shortest=None,
-        )
-        .overwrite_output()
-        .run(quiet=True)
-    )
-
-    logger.info("Audio overlay done for %s → %s", scene_id, output_path)
-    return output_path
-
-
-# ══════════════════════════════════════════════
-# Step 4 — Concatenate All Scenes
+# Step 2 — Concatenate All Scenes
 # ══════════════════════════════════════════════
 
 def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) -> Path:
@@ -126,7 +61,7 @@ def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) ->
     concat_file = work_dir / "concat_list.txt"
     with open(concat_file, "w") as f:
         for video_path in scene_videos:
-            f.write(f"file '{video_path}'\n")
+            f.write(f"file '{video_path}'\\n")
 
     output_path = work_dir / f"final_video_{job_id}.mp4"
 
@@ -147,7 +82,7 @@ def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) ->
 
 
 # ══════════════════════════════════════════════
-# Step 5 — Cleanup
+# Step 3 — Cleanup
 # ══════════════════════════════════════════════
 
 def cleanup(work_dir: Path, final_video: Path, output_dir: Path, job_id: str) -> Path:
@@ -167,39 +102,62 @@ def cleanup(work_dir: Path, final_video: Path, output_dir: Path, job_id: str) ->
 # Orchestrator — run_manim_pipeline
 # ══════════════════════════════════════════════
 
-def run_manim_pipeline(draft: ManimDraft, job_id: str) -> str:
+def run_manim_pipeline(draft: DirectorStoryboard, job_id: str) -> str:
     """
-    Full Manim rendering pipeline orchestrator.
-
-    For each scene:
-      1. Generate TTS audio
-      2. Render Manim animation → silent .mp4
-      3. Overlay TTS audio onto the Manim video
-    Then concatenate all scenes and clean up.
+    Multi-Agent Audio-First Pipeline:
+    1. Generate TTS per scene
+    2. Feed audio length to Animator Agent for exact timing sync
+    3. Render the code (Manim automatically merges the audio)
+    4. Concat the clips.
     """
     settings.validate()
 
     work_dir = Path(tempfile.mkdtemp(prefix=f"sceneflow_manim_{job_id}_"))
-    logger.info("Manim pipeline started for job %s in %s", job_id, work_dir)
+    logger.info("Manim multi-agent pipeline started for job %s in %s", job_id, work_dir)
 
     scene_videos: list[Path] = []
+    
+    bg_color = "#0F172A"
+    if draft.style_config.brand_colors:
+        bg_color = draft.style_config.brand_colors[0]
+
+    previous_code = ""
 
     for scene in draft.scenes:
-        # 1. TTS
+        # 1. Generate Voice Audio (Get absolute duration)
         tts_path, tts_duration = generate_audio(scene, work_dir)
 
-        # 2. Manim render
-        manim_video = render_scene_animation(scene, work_dir)
+        # 2. Call Animator Agent (Context Chaining)
+        logger.info(f"Agent 2 Context Chaining: Generating Manim Code for {scene.scene_id} using length {tts_duration:.2f}s")
+        manim_code = generate_scene_manim_code(
+            scene_plan=scene,
+            bg_color=bg_color,
+            audio_duration=tts_duration,
+            audio_path=str(tts_path),
+            previous_code=previous_code
+        )
+        
+        # Save previous context state for the NEXT loop iteration
+        previous_code = manim_code
 
-        # 3. Overlay audio
-        final_scene = overlay_audio(manim_video, tts_path, tts_duration, scene.scene_id, work_dir)
-        scene_videos.append(final_scene)
+        # 3. Compile Manim 
+        scene_work_dir = work_dir / scene.scene_id
+        scene_work_dir.mkdir(exist_ok=True)
+        manim_video_path = render_manim_scene(
+            manim_code=manim_code,
+            scene_class_name="ExplainerScene",
+            work_dir=scene_work_dir,
+            quality="l",
+            narration_text=scene.narration_text,
+        )
+        
+        scene_videos.append(manim_video_path)
 
     # 4. Concatenate
     final_video = concatenate_scenes(scene_videos, job_id, work_dir)
 
     # 5. Cleanup
-    final_dest = cleanup(work_dir, final_video, settings.OUTPUT_DIR, job_id)
+    final_dest = cleanup(work_dir, final_video, Path(settings.OUTPUT_DIR), job_id)
 
     logger.info("Manim pipeline completed for job %s → %s", job_id, final_dest)
     return str(final_dest)
