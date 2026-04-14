@@ -87,23 +87,6 @@ def _attempt_llm_fix(original_code: str, error_msg: str) -> str:
         from .config import settings
 
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        
-        prompt = f"""The following Manim Python code failed to render with this error:
-
-ERROR:
-{error_msg[:1000]}
-
-ORIGINAL CODE:
-{original_code}
-
-Fix the code. Return ONLY the corrected Python code, nothing else.
-Rules:
-- Keep 'from manim import *' at the top
-- Keep the class named 'ExplainerScene'
-- Do NOT use SVGMobject, ImageMobject, or ThreeDScene
-- Avoid complex numpy operations on Manim color objects
-- Use simple shapes: Text, Rectangle, Circle, Arrow, etc.
-"""
 
         # Retry logic for parallel 503 spikes
         response = None
