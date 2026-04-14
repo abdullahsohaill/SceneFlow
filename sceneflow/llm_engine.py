@@ -97,48 +97,45 @@ def generate_director_plan(request: DraftRequest) -> DirectorStoryboard:
 # ──────────────────────────────────────────────────────────────
 
 ANIMATOR_SYSTEM_PROMPT = """\
-You are SceneFlow-Animator, an expert Manim Community programmer.
+You are SceneFlow-Animator, an expert Manim Community programmer with exceptional design taste.
 
-Your job: You are generating a single Python script for ONE specific scene in a larger sequence.
+Your job: You are generating a SINGLE Python script containing ONE Manim `Scene` subclass that tells the ENTIRE video story natively.
 
 CRITICAL RULES:
-1. ALWAYS start with: from manim import *
-2. Define exactly ONE Scene subclass named "ExplainerScene".
-3. Use self.camera.background_color = "{bg_color}" at the beginning.
-4. AUDIO SYNC IS MANDATORY: You must add the audio file like this:
-   `self.add_sound(r"{audio_path}")`
-   Your animations (`self.play`, `self.wait`) must sum perfectly to the exact audio duration: {audio_duration:.2f} seconds.
-5. CONTEXT CHAINING: If Previous Scene Code is provided, you must instantly recreate its final visual state at `run_time=0` (using `.add()`, `.set_opacity()`, etc).
-6. TEXT FORMATTING: Extremely important. If you are drawing text on screen, ALWAYS use `font_size=24` or use `Paragraph` to prevent text from overflowing the screen. Keep text short and centered.
+1. ALWAYS start with: `from manim import *`
+2. Define exactly ONE Scene subclass named `ExplainerScene(Scene)`.
+3. Use `self.camera.background_color = "{bg_color}"` at the beginning.
+4. AUDIO SYNC IS MANDATORY: For each scene segment, you will be provided an `audio_path` and `audio_duration`.
+   You must add the audio file like this exactly: `self.add_sound(r"{{audio_path}}")`
+   Your animations (`self.play`, `self.wait`) for that segment MUST sum perfectly to the exact audio duration.
+5. CONTINUITY: You are animating sequentially. Do not use `.clear()` needlessly; morph objects smoothly or fade old things out to keep the visual flow continuous.
+6. AESTHETICS & DISPLAY: The current visuals are unappealing. You MUST make the video look extremely premium:
+   - Do NOT use generic raw shapes. Use beautiful harmonious colors (e.g. pastel Blues, Purples, dynamic combinations).
+   - Draw glowing edges, soft backgrounds, or gradients if possible.
+   - TEXT FORMATTING: Extremely important. If you are drawing text on screen, ALWAYS use `font="sans-serif"` and clean scaling (`font_size=24` to 36). Avoid overlapping text. If a text string is long, use `Paragraph()` or chop it. Keep text centered, readable, and visually appealing.
+   - Add micro-animations (smooth Create, FadeIn, Transform).
 
 Return ONLY pure Python code. Do not output markdown code blocks.
 """
 
-def generate_scene_manim_code(
-    scene_plan: DirectorScene, 
+def generate_full_manim_code(
+    scenes_data: list[dict], 
     bg_color: str,
-    audio_duration: float, 
-    audio_path: str,
-    previous_code: str = ""
 ) -> str:
-    """Agent 2: Generates Manim Python for a single scene with Audio injection."""
+    """Agent 2: Generates a monolithic Manim script spanning the entire video sequence."""
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     system_message = ANIMATOR_SYSTEM_PROMPT.format(
         bg_color=bg_color,
-        audio_duration=audio_duration,
-        audio_path=audio_path.replace("\\", "\\\\"),
     )
 
-    user_message = f"""
-SCENE TASK:
-Render the following scene using Manim.
-Narration Being Spoken: {scene_plan.narration_text}
-Visuals Requested: {scene_plan.visual_description}
-
-PREVIOUS SCENE CODE (For context chaining):
-{previous_code if previous_code else "None. This is the first scene."}
-"""
+    user_message = "SCENE TIMELINE REQUIREMENTS:\n\n"
+    for idx, s in enumerate(scenes_data):
+        user_message += f"--- SEGMENT {idx + 1} ---\n"
+        user_message += f"Narration Being Spoken: {s['narration']}\n"
+        user_message += f"Visuals Requested: {s['visuals']}\n"
+        user_message += f"Audio File to use: {s['audio_path'].replace(chr(92), chr(92)+chr(92))}\n"
+        user_message += f"Audio Duration (Total wait/play time MUST match this): {s['duration']:.2f} seconds\n\n"
 
     response = generate_with_retry(
         client=client,
@@ -156,3 +153,4 @@ PREVIOUS SCENE CODE (For context chaining):
         code = code[:-3]
         
     return code.strip()
+
