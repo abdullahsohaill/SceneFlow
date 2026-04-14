@@ -4,7 +4,8 @@ SceneFlow API — Manim Video Pipeline
 Orchestrates the Audio-First Multi-Agent rendering flow with Parallelism:
   1. (Sequential) Agent 1 & Agent 2: Storyboard & Code Generation (Context Chaining)
   2. (Parallel) Manim Rendering of all scenes simultaneously.
-  3. (Sequential) Final concatenation.
+  3. (Parallel) Muxing each silent Manim video with its explicit TTS audio padded by frozen frames.
+  4. (Sequential) Final concatenation.
 """
 
 from __future__ import annotations
@@ -54,16 +55,16 @@ def generate_audio_step(scene: DirectorScene, work_dir: Path) -> tuple[Path, flo
 
 
 # ══════════════════════════════════════════════
-# Step 2 — Parallel Rendering Helper
+# Step 2 — Parallel Rendering & Muxing Helper
 # ══════════════════════════════════════════════
 
-def render_scene_task(scene_id: str, code: str, narration: str, work_dir: Path) -> Path:
-    """Helper used in ThreadPool to render a single scene."""
+def render_and_mux_task(scene_id: str, code: str, narration: str, audio_path: Path, work_dir: Path) -> Path:
+    """Renders silent video and muxes it with audio explicitly to prevent desync."""
     scene_work_dir = work_dir / scene_id
     scene_work_dir.mkdir(exist_ok=True)
     
     logger.info(f"Parallel Render Started: {scene_id}")
-    return render_manim_scene(
+    silent_video_path = render_manim_scene(
         manim_code=code,
         scene_class_name="ExplainerScene",
         work_dir=scene_work_dir,
@@ -71,17 +72,35 @@ def render_scene_task(scene_id: str, code: str, narration: str, work_dir: Path) 
         narration_text=narration,
     )
 
+    # Now we mux it using ffmpeg, padding video if it is too short!
+    synced_video_path = scene_work_dir / f"{scene_id}_synced.mp4"
+    logger.info(f"Muxing Audio/Video safely for: {scene_id}")
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(silent_video_path),
+        "-i", str(audio_path),
+        "-filter_complex", "[0:v]tpad=stop_mode=clone:stop_duration=99[v]",
+        "-map", "[v]",
+        "-map", "1:a",
+        "-c:a", "copy",
+        "-shortest",
+        str(synced_video_path)
+    ]
+    
+    subprocess.run(cmd, check=True, capture_output=True)
+    return synced_video_path
+
 
 # ══════════════════════════════════════════════
 # Step 3 — Post-Processing
 # ══════════════════════════════════════════════
 
 def concatenate_scenes(scene_videos: list[Path], job_id: str, work_dir: Path) -> Path:
-    """Concatenate individual scene MP4s into one final video."""
+    """Concatenate individual synced scene MP4s into one final video."""
     concat_file = work_dir / "concat_list.txt"
     with open(concat_file, "w") as f:
         for video_path in scene_videos:
-            # Absolute path with escaped backslashes for ffmpeg
             f.write(f"file '{video_path}'\n")
 
     output_path = work_dir / f"final_video_{job_id}.mp4"
@@ -123,7 +142,7 @@ def run_manim_pipeline(draft: DirectorStoryboard, job_id: str) -> str:
     """
     Optimized Parallel Pipeline:
     1. (Sequential) Generate all TTS and LLM Code first.
-    2. (Parallel) Spin up threads to render all Manim clips simultaneously.
+    2. (Parallel) Spin up threads to render Manim clips AND mux them safely.
     3. (Sequential) Merge and Cleanup.
     """
     settings.validate()
@@ -161,17 +180,17 @@ def run_manim_pipeline(draft: DirectorStoryboard, job_id: str) -> str:
         generation_results.append({
             "id": scene.scene_id,
             "code": manim_code,
-            "narration": scene.narration_text
+            "narration": scene.narration_text,
+            "audio_path": tts_path
         })
 
-    # --- Phase 2: Parallel Rendering (CPU Bound in subprocess) ---
-    logger.info(f"Starting Parallel Rendering for {len(generation_results)} scenes...")
+    # --- Phase 2: Parallel Rendering & Muxing ---
+    logger.info(f"Starting Parallel Rendering & Muxing for {len(generation_results)} scenes...")
     
     scene_videos: list[Path] = []
-    # Using threads because the actual work is done in a separate 'manim' subprocess
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [
-            executor.submit(render_scene_task, res["id"], res["code"], res["narration"], work_dir)
+            executor.submit(render_and_mux_task, res["id"], res["code"], res["narration"], res["audio_path"], work_dir)
             for res in generation_results
         ]
         scene_videos = [f.result() for f in futures]

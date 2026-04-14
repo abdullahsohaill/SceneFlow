@@ -35,8 +35,7 @@ def generate_with_retry(client, model, contents, config=None, retries=3, delay=2
 DIRECTOR_SYSTEM_PROMPT = """\
 You are SceneFlow-Director, an expert educational video planner.
 
-Your job: Given a topic and audience, autonomously analyze the topic and determine the optimal number of scenes. 
-IMPORTANT: For now, be extremely concise. Aim for 4 to 7 scenes total. Do not exceed 8 scenes. Focus on the most critical high-level points.
+Your job: Given a topic and audience, autonomously analyze the topic's complexity and determine EXACTLY how many scenes are required to fully explain it in high detail. Do not rush the explanation. A complex topic might require 10-15 scenes.
 This is for a Manim-animated video.
 
 For EVERY scene you determine is necessary, provide:
@@ -105,11 +104,10 @@ CRITICAL RULES:
 1. ALWAYS start with: from manim import *
 2. Define exactly ONE Scene subclass named "ExplainerScene".
 3. Use self.camera.background_color = "{bg_color}" at the beginning.
-4. AUDIO SYNC IS MANDATORY: You must add the audio file like this:
-   `self.add_sound(r"{audio_path}")`
-   Your animations (`self.play`, `self.wait`) must sum perfectly to the exact audio duration: {audio_duration:.2f} seconds.
-5. CONTEXT CHAINING: If Previous Scene Code is provided, you must instantly recreate its final visual state at `run_time=0` (using `.add()`, `.set_opacity()`, etc).
-6. TEXT FORMATTING: Extremely important. If you are drawing text on screen, ALWAYS use `font_size=24` or use `Paragraph` to prevent text from overflowing the screen. Keep text short and centered.
+4. RUN_TIME TARGET: Your animations (`self.play`, `self.wait`) should last approximately {audio_duration:.2f} seconds. Do NOT import or use audio APIs.
+5. CONTEXT CHAINING: If Previous Scene Code is provided, instantly recreate its visually relevant final state at `run_time=0` (using `.add()`, etc).
+6. TEXT WRAPPING (MANDATORY): Text scaling is extremely important. You MUST use `.scale_to_fit_width(config.frame_width - 1)` on any Text or VGroup of texts that could overflow. Break long paragraphs into multiple smaller sentences to display sequentially.
+7. CINEMATIC AESTHETICS: Use beautiful pastel colors, glowing effects, and harmonious design. Do not use plain white generic boxes. Do not block the center randomly.
 
 Return ONLY pure Python code. Do not output markdown code blocks.
 """
@@ -127,7 +125,6 @@ def generate_scene_manim_code(
     system_message = ANIMATOR_SYSTEM_PROMPT.format(
         bg_color=bg_color,
         audio_duration=audio_duration,
-        audio_path=audio_path.replace("\\", "\\\\"),
     )
 
     user_message = f"""
